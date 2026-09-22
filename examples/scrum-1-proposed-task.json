@@ -1,0 +1,80 @@
+{
+  "summary": "Generate a Jira-ready task from a local product brief",
+  "issue_type": "Task",
+  "context": "Product ideas currently become vague Jira tasks that require repeated clarification before engineering can begin. The first vertical slice should prove that a bounded AutoGen Product Owner can turn a local brief into one reviewable, schema-valid task without changing Jira.",
+  "user_story": "As a product owner, I want a local brief converted into a reviewable Jira task so that engineering refinement starts from clear and testable requirements.",
+  "desired_outcome": "A developer can run one local command and receive a structured Jira task in JSON and readable Markdown, together with a deterministic Definition of Ready result.",
+  "business_value": "Reduce refinement time and prevent avoidable implementation rework caused by vague work items.",
+  "scope": [
+    "Load and validate a local ProductBrief JSON file",
+    "Use one bounded AutoGen AssistantAgent session to create a JiraTaskDraft",
+    "Validate the structured output with Pydantic",
+    "Evaluate the draft with deterministic Definition of Ready checks",
+    "Render the draft locally without writing to Jira"
+  ],
+  "non_goals": [
+    "Creating or updating Jira issues",
+    "Running an autonomous group chat",
+    "Calling Jev in the first vertical slice",
+    "Estimating priority or story points"
+  ],
+  "acceptance_criteria": [
+    {
+      "given": "a valid local product brief",
+      "when": "the draft command runs with valid model configuration",
+      "then": "it produces a schema-valid JiraTaskDraft",
+      "evidence": "an automated schema-validation test and a saved JSON artifact"
+    },
+    {
+      "given": "a generated draft",
+      "when": "Definition of Ready evaluation runs",
+      "then": "every failed check is returned by name and a failing gate uses a non-zero exit code",
+      "evidence": "unit tests for passing and failing drafts"
+    },
+    {
+      "given": "the default first-issue workflow",
+      "when": "generation completes",
+      "then": "no Jira create or update request is sent",
+      "evidence": "an integration test with a mocked Jira transport"
+    },
+    {
+      "given": "the repository test suite",
+      "when": "continuous integration runs",
+      "then": "Ruff, mypy, and pytest pass on supported Python versions",
+      "evidence": "green CI checks"
+    }
+  ],
+  "test_plan": [
+    "Unit-test ProductBrief and JiraTaskDraft validation",
+    "Unit-test passing and failing Definition of Ready evaluations",
+    "Mock the Jira transport and prove that dry-run performs no request",
+    "Run Ruff, mypy, and pytest locally and in CI"
+  ],
+  "dependencies": [
+    "Python 3.10 or later",
+    "Microsoft AutoGen AgentChat 0.7.5"
+  ],
+  "risks": [
+    "Model output may fail schema validation and must not produce partial output",
+    "Prompt quality may vary across models and needs a public evaluation dataset"
+  ],
+  "rollout": [
+    "Start with local dry-run generation",
+    "Review generated tasks manually before enabling Jira publication"
+  ],
+  "success_metrics": [
+    "The example brief produces one valid task draft in a bounded run",
+    "All deterministic quality checks and repository tests pass",
+    "Zero Jira writes occur in the first vertical slice"
+  ],
+  "open_questions": [
+    "Which evaluation dataset should become the public benchmark for task quality?",
+    "Which Jira fields beyond summary and description should be supported next?"
+  ],
+  "repository": "kudretocom/agile-po-agent",
+  "labels": [
+    "ai-drafted",
+    "needs-review",
+    "mvp"
+  ]
+}

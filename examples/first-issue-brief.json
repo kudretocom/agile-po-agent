@@ -1,0 +1,27 @@
+{
+  "title": "Generate a Jira-ready task from a local product brief",
+  "problem": "Product ideas currently become vague Jira tasks that require repeated clarification before engineering can begin.",
+  "target_user": "Product owners and engineering leads",
+  "desired_outcome": "A local command produces one structured, reviewable Jira task draft without writing to Jira.",
+  "business_value": "Reduce refinement time while improving task clarity, testability, and delivery confidence.",
+  "constraints": [
+    "The first version must be dry-run only",
+    "No credentials or private Jira metadata may enter the repository",
+    "The generation loop must be bounded"
+  ],
+  "known_context": [
+    "Use Microsoft AutoGen AgentChat 0.7.5",
+    "Use a validated Pydantic output model",
+    "Evaluate Definition of Ready deterministically"
+  ],
+  "non_goals": [
+    "Creating or updating Jira issues in the first vertical slice",
+    "Running an autonomous multi-agent group chat",
+    "Estimating story points"
+  ],
+  "source_links": [
+    "https://microsoft.github.io/autogen/stable/user-guide/agentchat-user-guide/quickstart.html"
+  ],
+  "repository": "kudretocom/agile-po-agent"
+}
+
