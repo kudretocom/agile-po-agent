@@ -67,3 +67,41 @@ async def test_jev_rejects_boolean_noul() -> None:
     with pytest.raises(ValueError, match="numeric"):
         await client.evaluate({})
 
+
+@pytest.mark.asyncio
+async def test_jev_rejects_malformed_response() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"answers": {"next_worker": {"choice": "write"}}})
+
+    client = TypeSafeJevClient(
+        Settings(typesafe_api_key="test-only", typesafe_api_url="https://example.invalid"),
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(ValueError, match="missing or malformed"):
+        await client.evaluate({})
+
+
+@pytest.mark.asyncio
+async def test_jev_rejects_score_outside_declared_rubric() -> None:
+    async def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "answers": {
+                    "next_worker": {"choice": "finish"},
+                    "needs_web_research": {"noul": 0.0},
+                    "needs_repository_files": {"noul": 0.0},
+                    "brief_sufficient": {"noul": 1.0},
+                    "ready_to_ship": {"noul": 1.0},
+                    "quality": {"score": 4.0},
+                    "allow_action": {"choice": "deny"},
+                }
+            },
+        )
+
+    client = TypeSafeJevClient(
+        Settings(typesafe_api_key="test-only", typesafe_api_url="https://example.invalid"),
+        transport=httpx.MockTransport(handler),
+    )
+    with pytest.raises(ValueError, match="outside"):
+        await client.evaluate({})

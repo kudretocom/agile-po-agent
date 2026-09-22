@@ -54,6 +54,8 @@ class ShippingGate:
         ready_to_ship: float,
         quality_normalized: float,
         evidence: DeliveryEvidence,
+        side_effect_requested: bool = False,
+        human_authorized: bool = False,
     ) -> ShippingDecision:
         failures: list[str] = []
         if ready_to_ship < self.ready_threshold:
@@ -68,6 +70,8 @@ class ShippingGate:
             failures.append("typecheck_failed_or_missing")
         if evidence.unresolved_blockers:
             failures.append("unresolved_blockers")
+        if side_effect_requested and not human_authorized:
+            failures.append("human_authorization_missing")
         return ShippingDecision(passed=not failures, failures=failures)
 
 
@@ -80,4 +84,3 @@ def normalize_score(raw_score: float, number_of_levels: int) -> float:
     if not 0.0 <= raw_score <= maximum:
         raise ValueError("raw score is outside the declared rubric")
     return raw_score / maximum
-

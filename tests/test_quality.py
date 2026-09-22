@@ -57,3 +57,17 @@ def test_normalize_score_rejects_out_of_range_value() -> None:
     else:
         raise AssertionError("invalid score should fail closed")
 
+
+def test_shipping_gate_requires_human_authorization_for_side_effect() -> None:
+    result = ShippingGate().evaluate(
+        ready_to_ship=0.95,
+        quality_normalized=0.9,
+        evidence=DeliveryEvidence(
+            tests_passed=True,
+            lint_passed=True,
+            typecheck_passed=True,
+        ),
+        side_effect_requested=True,
+    )
+    assert not result.passed
+    assert "human_authorization_missing" in result.failures
