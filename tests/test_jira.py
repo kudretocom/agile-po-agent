@@ -29,3 +29,30 @@ def test_update_requires_confirmation() -> None:
     with pytest.raises(PermissionError, match="confirmation"):
         client.update("TEST-1", ready_draft())
 
+
+def test_confirmed_update_uses_only_mocked_transport() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(204)
+
+    client = JiraClient(settings(), transport=httpx.MockTransport(handler))
+    client.update("TEST-1", ready_draft(), confirm=True)
+
+    assert len(requests) == 1
+    assert requests[0].method == "PUT"
+    assert requests[0].url.path == "/rest/api/3/issue/TEST-1"
+
+
+def test_confirmed_create_uses_only_mocked_transport() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(201, json={"key": "TEST-2"})
+
+    client = JiraClient(settings(), transport=httpx.MockTransport(handler))
+    assert client.create("TEST", ready_draft(), confirm=True) == "TEST-2"
+    assert len(requests) == 1
+    assert requests[0].method == "POST"
