@@ -3,7 +3,7 @@
 Agile PO Agent turns a rough product brief into a clear, testable Jira work item. It combines:
 
 - **Microsoft AutoGen AgentChat** for product reasoning and structured drafting;
-- **TypeSafe Jev** for small, auditable routing and readiness decisions;
+- a **TypeSafe Jev client scaffold** for small, auditable routing and readiness decisions;
 - **deterministic quality gates** for Definition of Ready and test-based shipping decisions;
 - **a guarded Jira adapter** that is dry-run by default.
 
@@ -11,7 +11,7 @@ The project is intentionally opinionated: a language model may propose work, but
 
 ## Status
 
-This repository contains the first public-ready MVP scaffold. It does not publish to Jira or call a model during installation or tests. Live OpenAI, Jev, and Jira operations require explicit configuration and an explicit publish confirmation.
+This repository contains the first public-ready MVP scaffold. Installation and automated tests do not call external APIs. AutoGen drafting works with an injected OpenAI key; the Jev client has mock-tested parsing but is not yet called by `ProductOwnerOrchestrator`. Jira writes require an explicit publish confirmation or a separate, authorized connector workflow.
 
 ## Architecture
 
@@ -20,16 +20,12 @@ Product brief
     ↓
 AutoGen ProductOwnerAgent → structured JiraTaskDraft
     ↓
-Deterministic Definition of Ready evaluation
-    ↓
-Jev atomic decisions (route, research needs, readiness, action permission)
-    ↓
 Revision loop (bounded by MAX_STEPS)
     ↓
 Human review / guarded Jira publish
 ```
 
-AutoGen is installed inside this repository's virtual environment. Shared credentials remain outside the repository and are injected at runtime. Jev is not an AutoGen agent; it is a separate decision gateway called by the Python orchestrator.
+AutoGen is installed inside this repository's virtual environment. Shared credentials remain outside the repository and are injected at runtime. Jev is not an AutoGen agent. Its client exists, but wiring its decisions into the orchestrator, verifying the live API contract, and provisioning a non-production credential remain separate work.
 
 ## Quickstart
 
@@ -83,7 +79,7 @@ The MVP calls one `AssistantAgent` directly and uses bounded revision turns. It 
 - No real credential belongs in this repository.
 - `.env.example` contains names and inert values only.
 - Jira publication is dry-run unless explicitly confirmed.
-- Model and Jev responses are schema-validated.
+- Model responses are schema-validated; Jev parsing is mock-tested but not yet in the live draft path.
 - Malformed decision responses fail closed.
 
 See [docs/architecture.md](docs/architecture.md) and [SECURITY.md](SECURITY.md).
@@ -91,4 +87,3 @@ See [docs/architecture.md](docs/architecture.md) and [SECURITY.md](SECURITY.md).
 ## License
 
 MIT
-

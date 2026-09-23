@@ -9,11 +9,11 @@ The system has four deliberately separate responsibilities:
 3. `TypeSafeJevClient` asks atomic Choice, Score, and Noul questions. It never produces prose and never owns side effects.
 4. `JiraClient` renders and publishes a validated draft. It is dry-run unless the caller explicitly confirms the write.
 
-The `ProductOwnerOrchestrator` owns the bounded loop and composes these parts.
+The `ProductOwnerOrchestrator` currently composes AutoGen drafting and the Definition of Ready evaluator. Jev and Jira adapters are separate scaffolds, not yet wired into that loop.
 
 ## Jev decisions
 
-The MVP uses separate questions for web and repository context:
+The mock-tested Jev client defines separate questions for web and repository context:
 
 - `needs_web_research`: Noul probability;
 - `needs_repository_files`: Noul probability;
@@ -46,4 +46,3 @@ Jev may recommend readiness; it cannot waive failed tests or authorize a Jira wr
 AutoGen runs from the repository's `.venv`. Each issue receives a fresh `AssistantAgent` session so that context does not leak across customers or Jira issues. The orchestrator closes the model client after each run.
 
 The first release uses one PO agent rather than a group chat. Future agents must be narrow, tool-limited, and selected by the orchestrator rather than by an unbounded conversation.
-
