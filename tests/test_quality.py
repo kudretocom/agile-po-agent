@@ -43,6 +43,7 @@ def test_shipping_gate_requires_tests_and_thresholds() -> None:
             tests_passed=True,
             lint_passed=True,
             typecheck_passed=False,
+            human_approved=True,
         ),
     )
     assert not result.passed
@@ -58,7 +59,7 @@ def test_normalize_score_rejects_out_of_range_value() -> None:
         raise AssertionError("invalid score should fail closed")
 
 
-def test_shipping_gate_requires_human_authorization_for_side_effect() -> None:
+def test_shipping_gate_requires_human_approval() -> None:
     result = ShippingGate().evaluate(
         ready_to_ship=0.95,
         quality_normalized=0.9,
@@ -67,7 +68,27 @@ def test_shipping_gate_requires_human_authorization_for_side_effect() -> None:
             lint_passed=True,
             typecheck_passed=True,
         ),
-        side_effect_requested=True,
     )
     assert not result.passed
-    assert "human_authorization_missing" in result.failures
+    assert "human_approval_missing" in result.failures
+
+
+def test_definition_of_ready_returns_every_named_failure() -> None:
+    draft = ready_draft().model_copy(
+        update={
+            "summary": "Too vague",
+            "context": "Missing context",
+            "scope": [],
+            "test_plan": [],
+        }
+    )
+
+    result = DefinitionOfReadyEvaluator().evaluate(draft)
+
+    assert not result.passed
+    assert result.failures == [
+        "actionable_summary",
+        "context_present",
+        "scope_present",
+        "test_plan_present",
+    ]

@@ -54,8 +54,6 @@ class ShippingGate:
         ready_to_ship: float,
         quality_normalized: float,
         evidence: DeliveryEvidence,
-        side_effect_requested: bool = False,
-        human_authorized: bool = False,
     ) -> ShippingDecision:
         failures: list[str] = []
         if ready_to_ship < self.ready_threshold:
@@ -70,8 +68,8 @@ class ShippingGate:
             failures.append("typecheck_failed_or_missing")
         if evidence.unresolved_blockers:
             failures.append("unresolved_blockers")
-        if side_effect_requested and not human_authorized:
-            failures.append("human_authorization_missing")
+        if not evidence.human_approved:
+            failures.append("human_approval_missing")
         return ShippingDecision(passed=not failures, failures=failures)
 
 

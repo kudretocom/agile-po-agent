@@ -1,0 +1,64 @@
+{
+  "model": "jev-1.13.0",
+  "answers": {
+    "next_worker": {
+      "type": "choice",
+      "choice": "write",
+      "probabilities": {
+        "research": 0.02,
+        "write": 0.9,
+        "revise": 0.03,
+        "finish": 0.03,
+        "escalate": 0.02
+      },
+      "confidence": 0.88
+    },
+    "needs_web_research": {
+      "type": "noul",
+      "noul": 0.1
+    },
+    "needs_repository_files": {
+      "type": "noul",
+      "noul": 0.9
+    },
+    "brief_sufficient": {
+      "type": "noul",
+      "noul": 0.85
+    },
+    "ready_to_ship": {
+      "type": "noul",
+      "noul": 0.81
+    },
+    "quality": {
+      "type": "score",
+      "score": 2.38,
+      "legend": {
+        "0": "not actionable",
+        "1": "major refinement required",
+        "2": "minor refinement required",
+        "3": "ready for implementation"
+      },
+      "probabilities": {
+        "0": 0.02,
+        "1": 0.08,
+        "2": 0.4,
+        "3": 0.5
+      },
+      "confidence": 0.72
+    },
+    "allow_action": {
+      "type": "choice",
+      "choice": "ask",
+      "probabilities": {
+        "allow": 0.1,
+        "ask": 0.8,
+        "deny": 0.1
+      },
+      "confidence": 0.7
+    }
+  },
+  "usage": {
+    "input_tokens": 412,
+    "output_tokens": 76
+  }
+}

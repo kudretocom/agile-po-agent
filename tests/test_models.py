@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -35,3 +37,11 @@ def test_valid_jira_task_draft_is_accepted() -> None:
 def test_invalid_jira_task_draft_is_rejected() -> None:
     with pytest.raises(ValidationError):
         JiraTaskDraft.model_validate({"summary": "Too short"})
+
+
+def test_saved_scrum_1_json_artifact_is_schema_valid() -> None:
+    artifact = Path("examples/scrum-1-proposed-task.json")
+
+    draft = JiraTaskDraft.model_validate_json(artifact.read_text())
+
+    assert draft.summary == "Generate a Jira-ready task from a local product brief"
