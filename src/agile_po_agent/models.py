@@ -20,6 +20,12 @@ class ActionDecision(str, Enum):
     DENY = "deny"
 
 
+class NoulInterpretation(str, Enum):
+    NO = "no"
+    UNCERTAIN = "uncertain"
+    YES = "yes"
+
+
 class ProductBrief(BaseModel):
     title: str = Field(min_length=5, max_length=160)
     problem: str = Field(min_length=20)
@@ -116,6 +122,7 @@ class DeliveryEvidence(BaseModel):
     lint_passed: bool = False
     typecheck_passed: bool = False
     unresolved_blockers: int = Field(default=0, ge=0)
+    human_approved: bool = False
 
 
 class ShippingDecision(BaseModel):
@@ -125,10 +132,36 @@ class ShippingDecision(BaseModel):
 
 class JevDecision(BaseModel):
     next_worker: Worker
+    next_worker_probabilities: dict[Worker, float]
+    next_worker_confidence: float = Field(ge=0.0, le=1.0)
     needs_web_research: float = Field(ge=0.0, le=1.0)
     needs_repository_files: float = Field(ge=0.0, le=1.0)
     brief_sufficient: float = Field(ge=0.0, le=1.0)
     ready_to_ship: float = Field(ge=0.0, le=1.0)
+    quality_score: float
     quality_normalized: float = Field(ge=0.0, le=1.0)
+    quality_legend: dict[str, str]
+    quality_probabilities: dict[str, float]
+    quality_confidence: float = Field(ge=0.0, le=1.0)
     allow_action: ActionDecision
+    allow_action_probabilities: dict[ActionDecision, float]
+    allow_action_confidence: float = Field(ge=0.0, le=1.0)
 
+
+class JevUsage(BaseModel):
+    input_tokens: int = Field(ge=0)
+    output_tokens: int = Field(ge=0)
+
+
+class JevEvaluation(BaseModel):
+    model: str = Field(min_length=1)
+    decision: JevDecision
+    usage: JevUsage
+    latency_ms: float = Field(ge=0.0)
+
+
+class JevDecisionTrace(BaseModel):
+    step: int = Field(ge=0)
+    evaluation: JevEvaluation
+    needs_web_research: NoulInterpretation
+    needs_repository_files: NoulInterpretation

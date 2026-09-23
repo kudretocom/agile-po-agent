@@ -43,6 +43,7 @@ def test_shipping_gate_requires_tests_and_thresholds() -> None:
             tests_passed=True,
             lint_passed=True,
             typecheck_passed=False,
+            human_approved=True,
         ),
     )
     assert not result.passed
@@ -56,4 +57,3 @@ def test_normalize_score_rejects_out_of_range_value() -> None:
         assert "outside" in str(error)
     else:
         raise AssertionError("invalid score should fail closed")
-
