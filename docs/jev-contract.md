@@ -23,8 +23,8 @@ Responses contain a resolved `model`, an `answers` map with exactly the requeste
 ## Answer validation
 
 - Noul requires `type: "noul"` and a finite `noul` probability in `[0, 1]`. Values between `NOUL_NO_THRESHOLD` and `NOUL_YES_THRESHOLD` remain uncertain and stop automatic routing.
-- Choice requires `type: "choice"`, a selected requested option, every requested option probability, a distribution summing to one within the documented rounding tolerance, and confidence in `[0, 1]`.
-- Score requires `type: "score"`, the exact requested legend, every rubric-level probability, a probability-weighted score inside the rubric, and confidence in `[0, 1]`.
+- Choice requires `type: "choice"`, a selected requested option, every requested option probability, a distribution summing to one within a bounded display-rounding tolerance, and confidence in `[0, 1]`.
+- Score requires `type: "score"`, the exact requested legend, every rubric-level probability, a score consistent with the probability-weighted rubric after accounting for the API's rounded display probabilities, and confidence in `[0, 1]`.
 
 Missing, extra, malformed, non-finite, out-of-range, contradictory, oversized, non-JSON, HTTP-error, and timeout responses fail closed. Upstream response bodies and credentials are not included in operator errors.
 

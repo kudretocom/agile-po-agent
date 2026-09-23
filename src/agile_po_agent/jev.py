@@ -42,7 +42,12 @@ class TypeSafeJevClient:
         "quality",
         "allow_action",
     }
-    PROBABILITY_SUM_TOLERANCE = 0.001
+    # TypeSafe returns rounded display probabilities. With up to five Choice options,
+    # independent two-decimal rounding can move the displayed sum by roughly 0.025.
+    PROBABILITY_SUM_TOLERANCE = 0.03
+    # Score is derived before the returned probabilities are rounded. Four displayed
+    # levels can therefore differ from the returned score by up to about 0.035.
+    SCORE_ROUNDING_TOLERANCE = 0.04
 
     def __init__(
         self,
@@ -174,7 +179,7 @@ class TypeSafeJevClient:
             raw_quality,
             expected_quality,
             rel_tol=0.0,
-            abs_tol=self.PROBABILITY_SUM_TOLERANCE,
+            abs_tol=self.SCORE_ROUNDING_TOLERANCE,
         ):
             raise JevEvaluationError(
                 "Jev score does not match its probability-weighted rubric"

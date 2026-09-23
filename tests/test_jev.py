@@ -97,6 +97,20 @@ def test_jev_rejects_malformed_contract_fields(
         client()._parse(payload)
 
 
+def test_jev_accepts_provider_rounded_score_distribution() -> None:
+    payload = fixture_response()
+    payload["answers"]["quality"].update(
+        score=0.31,
+        probabilities={"0": 0.76, "1": 0.18, "2": 0.03, "3": 0.03},
+        confidence=0.69,
+    )
+
+    evaluation = client()._parse(payload)
+
+    assert evaluation.decision.quality_score == pytest.approx(0.31)
+    assert evaluation.decision.quality_normalized == pytest.approx(0.31 / 3)
+
+
 @pytest.mark.asyncio
 async def test_jev_sanitizes_http_errors_without_exposing_credentials_or_body() -> None:
     secret = "non-production-test-secret"
