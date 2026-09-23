@@ -68,6 +68,8 @@ class ShippingGate:
             failures.append("typecheck_failed_or_missing")
         if evidence.unresolved_blockers:
             failures.append("unresolved_blockers")
+        if not evidence.human_approved:
+            failures.append("human_approval_missing")
         return ShippingDecision(passed=not failures, failures=failures)
 
 
@@ -80,4 +82,3 @@ def normalize_score(raw_score: float, number_of_levels: int) -> float:
     if not 0.0 <= raw_score <= maximum:
         raise ValueError("raw score is outside the declared rubric")
     return raw_score / maximum
-

@@ -3,7 +3,7 @@
 Agile PO Agent turns a rough product brief into a clear, testable Jira work item. It combines:
 
 - **Microsoft AutoGen AgentChat** for product reasoning and structured drafting;
-- a **TypeSafe Jev client scaffold** for small, auditable routing and readiness decisions;
+- a **TypeSafe Jev client** for small, auditable routing and readiness decisions;
 - **deterministic quality gates** for Definition of Ready and test-based shipping decisions;
 - **a guarded Jira adapter** that is dry-run by default.
 
@@ -11,21 +11,23 @@ The project is intentionally opinionated: a language model may propose work, but
 
 ## Status
 
-This repository contains the first public-ready MVP scaffold. Installation and automated tests do not call external APIs. AutoGen drafting works with an injected OpenAI key; the Jev client has mock-tested parsing but is not yet called by `ProductOwnerOrchestrator`. Jira writes require an explicit publish confirmation or a separate, authorized connector workflow.
+The bounded PO flow now validates and uses Jev decisions before AutoGen drafting or revision. Installation and automated tests remain fully offline through deterministic HTTP fixtures. Jira writes still require explicit publish confirmation or a separate, authorized connector workflow.
 
 ## Architecture
 
 ```text
 Product brief
     ↓
+Jev atomic decision gate → explicit web/repository evidence requirements
+    ↓
 AutoGen ProductOwnerAgent → structured JiraTaskDraft
     ↓
-Revision loop (bounded by MAX_STEPS)
+Jev-guided revision loop + deterministic readiness (bounded by MAX_STEPS)
     ↓
 Human review / guarded Jira publish
 ```
 
-AutoGen is installed inside this repository's virtual environment. Shared credentials remain outside the repository and are injected at runtime. Jev is not an AutoGen agent. Its client exists, but wiring its decisions into the orchestrator, verifying the live API contract, and provisioning a non-production credential remain separate work.
+AutoGen is installed inside this repository's virtual environment. Shared credentials remain outside the repository and are injected at runtime. Jev is not an AutoGen agent and never owns control flow or side effects. The direct wire contract is documented in [docs/jev-contract.md](docs/jev-contract.md).
 
 ## Quickstart
 
@@ -43,6 +45,15 @@ Generate a draft after providing credentials through your approved secret-inject
 
 ```sh
 .venv/bin/agile-po draft examples/first-issue-brief.json --output drafts/scrum-1.json
+```
+
+If Jev reports that external or repository evidence is required, collect it through an approved bounded process and explicitly pass `--web-research-complete` and/or `--repository-files-loaded`. Uncertain Noul values stop the run for review.
+
+An approved non-production Jev credential can be checked with one synthetic request:
+
+```sh
+TYPESAFE_ENVIRONMENT=non-production \
+  .venv/bin/agile-po jev-smoke --confirm-non-production
 ```
 
 Evaluate a previously generated draft without calling a model:
@@ -79,7 +90,7 @@ The MVP calls one `AssistantAgent` directly and uses bounded revision turns. It 
 - No real credential belongs in this repository.
 - `.env.example` contains names and inert values only.
 - Jira publication is dry-run unless explicitly confirmed.
-- Model responses are schema-validated; Jev parsing is mock-tested but not yet in the live draft path.
+- Model responses are schema-validated; Jev's official Choice, Score, Noul, usage, and envelope shapes are covered by deterministic fixtures.
 - Malformed decision responses fail closed.
 
 See [docs/architecture.md](docs/architecture.md) and [SECURITY.md](SECURITY.md).
