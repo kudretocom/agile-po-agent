@@ -1,0 +1,62 @@
+{
+  "schema": "wise.assessment.v1",
+  "run_id": "run-example-001",
+  "issue": {
+    "site": "example.atlassian.net",
+    "key": "SCRUM-42",
+    "version": "17"
+  },
+  "operation": "refine",
+  "state": "needs_decision",
+  "reason": "Payroll access criterion conflicts with the selected-employer access rule.",
+  "next_actions": [
+    "Product Owner decides whether former employees retain historical payroll access.",
+    "Review the proposed narrower acceptance criterion."
+  ],
+  "evidence": [
+    {
+      "source_id": "repo-1",
+      "kind": "repository",
+      "uri": "https://github.com/example/product/blob/abc123/access.py",
+      "version": "abc123",
+      "observed_at": "2026-09-24T12:00:00Z",
+      "access": "available",
+      "freshness": "current",
+      "finding": "Payroll access is scoped to the selected employer."
+    },
+    {
+      "source_id": "jira-1",
+      "kind": "jira",
+      "uri": "https://example.atlassian.net/browse/SCRUM-42",
+      "version": "17",
+      "observed_at": "2026-09-24T12:00:00Z",
+      "access": "available",
+      "freshness": "current",
+      "finding": "Draft criterion says an employee can see all payroll documents."
+    }
+  ],
+  "checks": [
+    {"name": "acceptance_criteria_testable", "passed": true},
+    {"name": "access_rule_resolved", "passed": false}
+  ],
+  "proposal": {
+    "draft_hash": "sha256:example-draft-hash",
+    "field": "description",
+    "before": "An employee can see all payroll documents.",
+    "after": "An employee can see payroll documents for the selected employer, subject to the approved historical-access rule.",
+    "supported_by": ["repo-1", "jira-1"],
+    "status": "pending_product_decision"
+  },
+  "approval": {"state": "not_requested", "draft_hash": null, "actor": null, "at": null},
+  "actions": [],
+  "jira_changed": false,
+  "trace": {
+    "decision": "escalate",
+    "decision_reason": "material_policy_conflict",
+    "model": "example-jev-model",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "latency_ms": 0,
+    "recorded_at": "2026-09-24T12:00:00Z"
+  }
+}
