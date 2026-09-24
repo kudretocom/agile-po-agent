@@ -1,6 +1,7 @@
 """Guarded Jira Cloud REST adapter."""
 
 from typing import Any
+from urllib.parse import quote, urlsplit
 
 import httpx
 
@@ -14,6 +15,22 @@ class JiraClient:
             raise ValueError("JIRA_BASE_URL, JIRA_EMAIL, and JIRA_API_TOKEN are required")
         self.settings = settings
         self._transport = transport
+
+    def read_issue(self, issue_key: str) -> dict[str, Any]:
+        """Fetch one issue for Wise without invoking any write endpoint."""
+
+        if not issue_key or not issue_key.replace("-", "").isalnum():
+            raise ValueError("a Jira issue key is required")
+        with self._client() as client:
+            response = client.get(
+                f"/rest/api/3/issue/{quote(issue_key, safe='')}",
+                params={"fields": "summary,description,issuetype,status,updated,issuelinks"},
+            )
+            response.raise_for_status()
+            payload = response.json()
+        if not isinstance(payload, dict) or payload.get("key") != issue_key:
+            raise ValueError("Jira returned an unexpected issue")
+        return payload
 
     def preview(self, draft: JiraTaskDraft, *, issue_key: str | None = None) -> dict[str, Any]:
         return {
@@ -65,6 +82,9 @@ class JiraClient:
         assert self.settings.jira_base_url
         assert self.settings.jira_email
         assert self.settings.jira_api_token
+        parts = urlsplit(self.settings.jira_base_url)
+        if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
+            raise ValueError("JIRA_BASE_URL must be an HTTPS site URL")
         return httpx.Client(
             base_url=self.settings.jira_base_url.rstrip("/"),
             auth=(self.settings.jira_email, self.settings.jira_api_token),
@@ -89,4 +109,3 @@ def _markdown_adf(markdown: str) -> dict[str, Any]:
             }
         )
     return {"version": 1, "type": "doc", "content": content}
-
