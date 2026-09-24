@@ -1,6 +1,6 @@
 # Wise: first-release product contract
 
-Status: proposed for Product Owner review (SCRUM-11, 24 September 2026). Reviewed with two live TypeSafe Jev playground requests, recorded in [wise-jev-review.md](wise-jev-review.md). This document specifies intended behavior; it does not claim the Jira agent is deployed.
+Status: accepted as the first-release planning baseline for SCRUM-11 by Kudret Keskin on 24 September 2026, following review of the draft and live TypeSafe Jev results. The Jev requests are recorded in [wise-jev-review.md](wise-jev-review.md). Open product choices below remain unresolved and must be settled before the dependent behavior ships. This document specifies intended behavior; it does not claim the Jira agent is deployed.
 
 ## Purpose and first-release boundary
 
@@ -89,4 +89,4 @@ Atlassian's [Rovo Agent Connector reference](https://developer.atlassian.com/pla
 3. Trace retention: keep only minimal references and decisions; set the actual retention period after privacy and customer-administration review.
 4. Required-source policy: use the claim-specific defaults above and the explicit conflict-resolution rule, then validate them with pilot issues before claiming full coverage. Jev returned 0.61 on sufficiency in both reviews, inside the configured Noul uncertainty band; the policy needs human acceptance and scenario validation.
 
-PO review: pending. No product owner has yet accepted these four choices or the proposed output schema. Acceptance of this document should record the reviewer, date, and any changes here or on SCRUM-11.
+PO review: the first-release planning baseline and versioned example output were accepted for moving to the next task on 24 September 2026. The four choices above were not individually approved. Their resolution belongs in the relevant implementation task or a recorded follow-up decision; Jev's uncertain answers do not settle them.
