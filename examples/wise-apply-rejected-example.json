@@ -1,0 +1,13 @@
+{
+  "schema": "wise.apply-result.v1",
+  "run_id": "run-example-002",
+  "issue": {"site": "example.atlassian.net", "key": "SCRUM-42", "approved_version": "17", "current_version": "18"},
+  "operation": "apply",
+  "result": "blocked",
+  "reason": "issue_changed_since_approval",
+  "approved_draft_hash": "sha256:example-draft-hash",
+  "requested_draft_hash": "sha256:example-draft-hash",
+  "next_action": "Reassess issue version 18 and request approval for a new diff.",
+  "actions": [],
+  "jira_changed": false
+}

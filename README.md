@@ -95,6 +95,10 @@ The MVP calls one `AssistantAgent` directly and uses bounded revision turns. It 
 
 See [docs/architecture.md](docs/architecture.md) and [SECURITY.md](SECURITY.md).
 
+## Wise product direction
+
+The proposed Jira agent first-release contract, decision rules, and example assessment output are in [docs/wise-product-contract.md](docs/wise-product-contract.md). This is a product specification under review, not a deployed integration.
+
 ## License
 
 MIT
