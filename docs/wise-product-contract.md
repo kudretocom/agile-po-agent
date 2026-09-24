@@ -1,6 +1,6 @@
 # Wise: first-release product contract
 
-Status: proposed for Product Owner review (SCRUM-11, 24 September 2026). This document specifies intended behavior; it does not claim the Jira agent is deployed.
+Status: proposed for Product Owner review (SCRUM-11, 24 September 2026). Reviewed with two live TypeSafe Jev playground requests, recorded in [wise-jev-review.md](wise-jev-review.md). This document specifies intended behavior; it does not claim the Jira agent is deployed.
 
 ## Purpose and first-release boundary
 
@@ -23,6 +23,8 @@ Minimum input is the Jira issue key, summary, description, type, status, version
 Each evidence item has `source_id`, `kind`, `uri`, `version`, `observed_at`, `access`, `freshness`, and a concise `finding`. `access` is `available`, `missing`, or `denied`; `freshness` is `current`, `stale`, or `unknown`. These states remain distinct. The user can see which findings support each proposed change. A repository reference without a commit SHA, or a Confluence page without a version, has unknown freshness until resolved. A source is never marked current merely because it was read today.
 
 The first pilot requires the Jira snapshot. Repository evidence becomes mandatory when a proposed criterion claims existing behavior or a code-level constraint. Confluence or other product evidence becomes mandatory when a proposed criterion asserts a product policy or approved user flow. External web research is requested only when the question depends on an external fact. The source owner or policy may later refine these defaults. Denied access does not authorize Wise to seek alternate credentials.
+
+For a material contradiction, Wise records both sources and stops at `Needs decision`. The Product Owner decides the intended product behavior; an engineering owner confirms the implementation gap when code differs from that decision. The resolution record names the decision maker, chosen rule, rationale, source versions, and any follow-up issue. Neither the newest source nor the repository automatically wins. Wise reassesses from a fresh issue snapshot after the resolution; an unresolved contradiction cannot become `Ready`.
 
 ## Decision rules
 
@@ -82,9 +84,9 @@ Atlassian's [Rovo Agent Connector reference](https://developer.atlassian.com/pla
 
 ## Proposed product decisions for review
 
-1. Pilot surface: assignment and `@mention` for Assess; Rovo Chat for follow-up Refine. Apply arrives only after approval controls are built. This tests the agent experience without making every issue edit automatic.
+1. Pilot surface: test a user-triggered `@mention` first as a proposed default, with assignment and Rovo Chat as alternatives. The initial Jev choice favored assignment but had only 0.23 confidence, below the repository's 0.70 Choice threshold. Therefore the surface is not settled by Jev; PO review and a small usability pilot determine it. Apply arrives only after approval controls are built.
 2. Evidence freshness: use immutable commit/page/issue versions; treat unversioned evidence as unknown. Do not impose a universal number of days on product policy, since age alone does not establish validity.
 3. Trace retention: keep only minimal references and decisions; set the actual retention period after privacy and customer-administration review.
-4. Required-source policy: use the claim-specific defaults above, then validate them with pilot issues before claiming full coverage.
+4. Required-source policy: use the claim-specific defaults above and the explicit conflict-resolution rule, then validate them with pilot issues before claiming full coverage. Jev returned 0.61 on sufficiency in both reviews, inside the configured Noul uncertainty band; the policy needs human acceptance and scenario validation.
 
 PO review: pending. No product owner has yet accepted these four choices or the proposed output schema. Acceptance of this document should record the reviewer, date, and any changes here or on SCRUM-11.
