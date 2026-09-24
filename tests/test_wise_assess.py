@@ -223,19 +223,23 @@ async def test_typesafe_choice_and_score_fixture_is_used() -> None:
                 "claim_0": {
                     "type": "choice", "choice": "supports", "confidence": 0.96,
                     "probabilities": {
-                        "supports": 0.96, "contradicts": 0.02, "insufficient": 0.02,
+                        "supports": 0.97, "contradicts": 0.0, "insufficient": 0.03,
                     },
+                    "stats": {},
                 },
                 "readiness_quality": {
-                    "type": "score", "score": 2.91, "confidence": 0.91,
+                    "type": "score", "score": 2.93, "confidence": 0.93,
                     "legend": {
                         "0": "No material support", "1": "Major support gaps",
                         "2": "Minor support gaps", "3": "Each claim directly supported",
                     },
-                    "probabilities": {"0": 0.01, "1": 0.02, "2": 0.02, "3": 0.95},
+                    "probabilities": {"0": 0.0, "1": 0.01, "2": 0.04, "3": 0.95},
+                    "stats": {},
                 },
             },
-            "usage": {"input_tokens": 200, "output_tokens": 30},
+            "usage": {"input_tokens": 507, "output_tokens": 61},
+            "request_id": "playground-synthetic-test",
+            "evaluation_time_ms": 53.9,
         })
 
     judge = TypeSafeClaimJudge(settings(), transport=httpx.MockTransport(handler))

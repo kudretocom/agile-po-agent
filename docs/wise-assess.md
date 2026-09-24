@@ -12,6 +12,8 @@ State precedence is `Blocked > Needs decision > Needs evidence > Ready`. Unresol
 
 The installed project skill is `.agents/skills/typesafe-ai/SKILL.md`, pinned by `skills-lock.json`. Design follows the live [TypeSafe API](https://docs.typesafe.ai/api), [State](https://docs.typesafe.ai/concepts/state), [Choice](https://docs.typesafe.ai/primitives/choice), and [citation-checking recipe](https://docs.typesafe.ai/cookbooks/citation_check). Tests use deterministic HTTP fixtures; the repository does not contain a TypeSafe credential.
 
+One authenticated Playground smoke request on 24 September 2026 used only synthetic claim/evidence text. `jev-1.13.0` returned `supports` at 0.97 probability with 0.96 Choice confidence and a 2.93/3 Score; usage was 507 input and 61 output tokens. The response also included top-level `request_id` and `evaluation_time_ms` plus per-answer `stats`. The client accepts these optional metadata fields while validating the required typed answers; the offline fixture now mirrors this observed envelope. This was a Playground judgment check, not a direct API smoke with the service credential.
+
 ## Pilot boundary and follow-up
 
 This is a callable Python core, not a deployed Rovo/A2A agent. Before a customer pilot, build authenticated source collectors for Confluence/repository/external data, a reliable issue-description-to-normalized-draft mapper, and an installation-scoped service boundary. The SCRUM-11 open product choices remain open, particularly the final required-source policy, undocumented claims, and freshness ownership. The pilot must not treat a fixture `Ready` as a claim of universal product readiness.

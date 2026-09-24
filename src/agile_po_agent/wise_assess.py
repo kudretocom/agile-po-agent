@@ -311,7 +311,8 @@ class TypeSafeClaimJudge:
             if len(response.content) > self.settings.typesafe_max_response_bytes:
                 raise ValueError("JEV response exceeded size limit")
             payload = response.json()
-            if not isinstance(payload, dict) or set(payload) != {"model", "answers", "usage"}:
+            if (not isinstance(payload, dict)
+                    or not {"model", "answers", "usage"} <= set(payload)):
                 raise ValueError("malformed JEV envelope")
             answers, usage = payload["answers"], payload["usage"]
             if not isinstance(answers, dict) or set(answers) != set(questions):
