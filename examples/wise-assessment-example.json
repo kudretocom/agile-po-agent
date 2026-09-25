@@ -4,27 +4,20 @@
   "issue": {
     "site": "example.atlassian.net",
     "key": "SCRUM-42",
-    "version": "17"
+    "version": "17",
+    "installation_id": "pilot-install"
   },
-  "operation": "refine",
+  "operation": "assess",
   "state": "needs_decision",
-  "reason": "Payroll access criterion conflicts with the selected-employer access rule.",
-  "next_actions": [
-    "Product Owner decides whether former employees retain historical payroll access.",
-    "Review the proposed narrower acceptance criterion."
-  ],
+  "reason": "Product policy and repository behavior disagree about historical payroll access.",
+  "next_actions": ["Product Owner reviews the cited sources and records the decision."],
   "evidence": [
     {
-      "source_id": "repo-1",
-      "kind": "repository",
-      "uri": "https://github.com/example/product/blob/abc123/access.py",
-      "version": "abc123",
-      "observed_at": "2026-09-24T12:00:00Z",
-      "access": "available",
-      "freshness": "current",
-      "finding": "Payroll access is scoped to the selected employer."
-    },
-    {
+      "scope": {
+        "installation_id": "pilot-install",
+        "site": "example.atlassian.net",
+        "issue_key": "SCRUM-42"
+      },
       "source_id": "jira-1",
       "kind": "jira",
       "uri": "https://example.atlassian.net/browse/SCRUM-42",
@@ -32,31 +25,51 @@
       "observed_at": "2026-09-24T12:00:00Z",
       "access": "available",
       "freshness": "current",
-      "finding": "Draft criterion says an employee can see all payroll documents."
+      "finding": "The issue asks whether former employees see historical payroll documents."
+    },
+    {
+      "scope": {
+        "installation_id": "pilot-install",
+        "site": "example.atlassian.net",
+        "issue_key": "SCRUM-42"
+      },
+      "source_id": "repo-1",
+      "kind": "repository",
+      "uri": "https://github.com/example/product/blob/abcdef0123456789/access.py",
+      "version": "abcdef0123456789",
+      "observed_at": "2026-09-24T12:00:00Z",
+      "access": "available",
+      "freshness": "current",
+      "finding": "Current access is scoped to the selected employer."
     }
   ],
-  "checks": [
-    {"name": "acceptance_criteria_testable", "passed": true},
-    {"name": "access_rule_resolved", "passed": false}
-  ],
-  "proposal": {
-    "draft_hash": "sha256:example-draft-hash",
-    "field": "description",
-    "before": "An employee can see all payroll documents.",
-    "after": "An employee can see payroll documents for the selected employer, subject to the approved historical-access rule.",
-    "supported_by": ["repo-1", "jira-1"],
-    "status": "pending_product_decision"
+  "checks": {
+    "actionable_summary": true,
+    "context_present": true,
+    "outcome_present": true,
+    "scope_present": true,
+    "non_goals_present": true,
+    "acceptance_criteria_testable": true,
+    "multiple_acceptance_criteria": true,
+    "test_plan_present": true,
+    "success_metrics_present": true
   },
-  "approval": {"state": "not_requested", "draft_hash": null, "actor": null, "at": null},
-  "actions": [],
+  "conflicts": [
+    {
+      "claim_id": "payroll-access",
+      "source_ids": ["jira-1", "repo-1"],
+      "description": "Product policy and repository behavior disagree about historical payroll access.",
+      "decision_owner": "Product Owner",
+      "chosen_rule": null,
+      "resolved_by": null,
+      "resolved_at": null,
+      "rationale": null,
+      "source_versions": {},
+      "follow_up_issue": null
+    }
+  ],
+  "missing_evidence": [],
   "jira_changed": false,
-  "trace": {
-    "decision": "escalate",
-    "decision_reason": "material_policy_conflict",
-    "model": "example-jev-model",
-    "input_tokens": 0,
-    "output_tokens": 0,
-    "latency_ms": 0,
-    "recorded_at": "2026-09-24T12:00:00Z"
-  }
+  "trace": null,
+  "jev_skipped_reason": "human_decision_required"
 }
