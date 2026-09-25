@@ -228,6 +228,7 @@ class Assessment(BaseModel):
     missing_evidence: list[str]
     jira_changed: bool = False
     trace: JevTrace | None = None
+    jev_skipped_reason: str | None = None
 
     @property
     def summary(self) -> str:
@@ -258,18 +259,20 @@ class TypeSafeClaimJudge:
         self.transport = transport
 
     async def judge(self, claims: list[Claim], evidence: list[Evidence]) -> JevTrace:
+        if not claims:
+            raise ValueError("at least one claim is required for a JEV judgment")
         by_id = {item.source_id: item for item in evidence}
         questions: dict[str, dict[str, Any]] = {
             f"claim_{index}": {
                 "type": "choice",
                 "instructions": (
-                    "Does the quoted evidence substantiate the claim? Judge only the supplied "
-                    "source findings, not the truth of missing sources."
+                    f"Compare claims[{index}].text only with findings in evidence named "
+                    f"by claims[{index}].source_ids. Do not infer missing sources."
                 ),
                 "criteria": {
-                    "supports": "The findings directly support the specific claim.",
-                    "contradicts": "The findings materially oppose the specific claim.",
-                    "insufficient": "The findings do not settle the specific claim.",
+                    "supports": "Findings directly support the claim.",
+                    "contradicts": "Findings materially oppose the claim.",
+                    "insufficient": "Findings do not settle the claim.",
                 },
             }
             for index, _ in enumerate(claims)
@@ -279,20 +282,15 @@ class TypeSafeClaimJudge:
             "instructions": "Rate how strongly the cited findings support the claims as a whole.",
             "criteria": self.QUALITY_LEVELS,
         }
+        cited_ids = {source_id for claim in claims for source_id in claim.source_ids}
         state = {
-            f"claim_{index}": {
-                "claim": claim.text,
-                "evidence": [
-                    {"source_id": source_id, "finding": by_id[source_id].finding}
-                    for source_id in claim.source_ids
-                ],
-            }
-            for index, claim in enumerate(claims)
+            "claims": [
+                {"text": claim.text, "source_ids": claim.source_ids} for claim in claims
+            ],
+            "evidence": {
+                source_id: by_id[source_id].finding for source_id in sorted(cited_ids)
+            },
         }
-        for index in range(len(claims)):
-            questions[f"claim_{index}"]["instructions"] += (
-                f" Evaluate `claim_{index}.claim` against `claim_{index}.evidence`."
-            )
         started = perf_counter()
         try:
             async with httpx.AsyncClient(
@@ -440,6 +438,7 @@ class WiseAssessor:
                 reason="Jira snapshot or scoped evidence could not be verified",
                 next_actions=["Check access and installation context, then retry the read."],
                 evidence=[], checks={}, conflicts=[], missing_evidence=[],
+                jev_skipped_reason="jira_read_or_scope_failed",
             )
         return await self.assess(item)
 
@@ -477,15 +476,25 @@ class WiseAssessor:
         check_gaps = [
             f"Definition of Ready: {name}" for name, ok in checks.items() if not ok
         ]
+        missing.extend(check_gaps)
+        unresolved = [c for c in item.conflicts if not c.is_resolved]
+        jev_skipped_reason: str | None = None
         trace: JevTrace | None = None
-        if not blocked and not missing and item.claims:
+        if blocked:
+            jev_skipped_reason = "operational_blocker"
+        elif unresolved or item.open_decisions:
+            jev_skipped_reason = "human_decision_required"
+        elif not item.claims:
+            jev_skipped_reason = "no_claims"
+        elif missing:
+            jev_skipped_reason = "missing_evidence_or_failed_check"
+        else:
             try:
                 trace = await self.judge.judge(item.claims, item.evidence)
                 if {j.claim_id for j in trace.judgments} != {c.claim_id for c in item.claims}:
                     raise ValueError("JEV did not assess every claim")
             except (RuntimeError, ValueError):
                 blocked.append("JEV unavailable or response invalid; retry safely")
-        unresolved = [c for c in item.conflicts if not c.is_resolved]
         uncertain = bool(trace and any(
             judgment.confidence < self.settings.jev_choice_confidence_threshold
             or judgment.relation == "contradicts"
@@ -496,7 +505,6 @@ class WiseAssessor:
         ))
         if trace and trace.quality_score / 3 < self.settings.quality_threshold:
             insufficient = True
-        missing.extend(check_gaps)
         if blocked:
             state, reason = WiseState.BLOCKED, blocked[0]
             actions = [
@@ -524,6 +532,7 @@ class WiseAssessor:
             state=state, reason=reason, next_actions=actions,
             evidence=item.evidence, checks=checks, conflicts=item.conflicts,
             missing_evidence=missing, trace=trace,
+            jev_skipped_reason=jev_skipped_reason,
         )
 
 

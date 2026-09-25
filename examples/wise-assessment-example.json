@@ -70,23 +70,6 @@
   ],
   "missing_evidence": [],
   "jira_changed": false,
-  "trace": {
-    "model": "example-jev-model",
-    "judgments": [
-      {
-        "claim_id": "payroll-access",
-        "relation": "contradicts",
-        "confidence": 0.92,
-        "probabilities": {
-          "supports": 0.04,
-          "contradicts": 0.92,
-          "insufficient": 0.04
-        }
-      }
-    ],
-    "input_tokens": 280,
-    "output_tokens": 34,
-    "latency_ms": 42.5,
-    "quality_score": 1.25
-  }
+  "trace": null,
+  "jev_skipped_reason": "human_decision_required"
 }

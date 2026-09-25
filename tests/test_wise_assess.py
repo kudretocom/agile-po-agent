@@ -164,7 +164,8 @@ async def test_conflict_beats_missing_check_and_needs_two_cited_sources() -> Non
         claim_id="claim-1", source_ids=("jira-1", "repo-1"),
         description="Product and code disagree about access", decision_owner="Product Owner",
     )
-    report = await WiseAssessor(settings(), StubJudge()).assess(
+    judge = StubJudge()
+    report = await WiseAssessor(settings(), judge).assess(
         item(conflicts=[conflict], normalized=False)
     )
     assert report.state == WiseState.NEEDS_DECISION
@@ -172,6 +173,20 @@ async def test_conflict_beats_missing_check_and_needs_two_cited_sources() -> Non
     assert report.missing_evidence == [
         "Definition of Ready: normalized_definition_of_ready_available"
     ]
+    assert judge.calls == 0
+    assert report.trace is None
+    assert report.jev_skipped_reason == "human_decision_required"
+
+
+@pytest.mark.asyncio
+async def test_open_decision_skips_jev() -> None:
+    judge = StubJudge()
+    baseline = item()
+    issue = baseline.model_copy(update={"open_decisions": ["Choose the access policy"]})
+    report = await WiseAssessor(settings(), judge).assess(issue)
+    assert report.state == WiseState.NEEDS_DECISION
+    assert report.jev_skipped_reason == "human_decision_required"
+    assert judge.calls == 0
 
 
 @pytest.mark.asyncio
@@ -181,12 +196,13 @@ async def test_uncertain_jev_requires_decision() -> None:
 
 
 @pytest.mark.asyncio
-async def test_high_jev_score_cannot_waive_failed_deterministic_check() -> None:
+async def test_failed_deterministic_check_skips_jev() -> None:
     judge = StubJudge()
     report = await WiseAssessor(settings(), judge).assess(item(normalized=False))
-    assert judge.calls == 1
-    assert report.trace and report.trace.quality_score == 3
+    assert judge.calls == 0
+    assert report.trace is None
     assert report.state == WiseState.NEEDS_EVIDENCE
+    assert report.jev_skipped_reason == "missing_evidence_or_failed_check"
 
 
 @pytest.mark.asyncio
@@ -250,7 +266,56 @@ async def test_typesafe_choice_and_score_fixture_is_used() -> None:
     payload = json.loads(requests[0].content)
     assert payload["model"] == "jev-latest"
     assert set(payload["questions"]) == {"claim_0", "readiness_quality"}
+    assert payload["state"]["claims"] == [{
+        "text": "Existing behavior limits access to the selected employer",
+        "source_ids": ["repo-1"],
+    }]
+    assert payload["state"]["evidence"] == {
+        "repo-1": "A versioned source supports the stated behavior."
+    }
     assert requests[0].method == "POST"
+
+
+@pytest.mark.asyncio
+async def test_shared_source_is_sent_once_for_multiple_claims() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json={
+            "model": "jev-1.13.0",
+            "answers": {
+                **{f"claim_{index}": {
+                    "type": "choice", "choice": "supports", "confidence": 0.96,
+                    "probabilities": {
+                        "supports": 0.97, "contradicts": 0.0, "insufficient": 0.03,
+                    },
+                } for index in range(3)},
+                "readiness_quality": {
+                    "type": "score", "score": 2.93, "confidence": 0.93,
+                    "legend": {
+                        "0": "No material support", "1": "Major support gaps",
+                        "2": "Minor support gaps", "3": "Each claim directly supported",
+                    },
+                    "probabilities": {"0": 0.0, "1": 0.01, "2": 0.04, "3": 0.95},
+                },
+            },
+            "usage": {"input_tokens": 300, "output_tokens": 100},
+        })
+
+    claims = [Claim(
+        claim_id=f"claim-{index}", text=f"Supported behavior {index}",
+        kind=ClaimKind.CODE_BEHAVIOR, source_ids=["repo-1"],
+    ) for index in range(3)]
+    judge = TypeSafeClaimJudge(settings(), transport=httpx.MockTransport(handler))
+    trace = await judge.judge(claims, [evidence(
+        "repo-1", EvidenceKind.REPOSITORY, version="abcdef0123456789"
+    )])
+    assert len(requests) == 1
+    payload = json.loads(requests[0].content)
+    assert len(payload["state"]["claims"]) == 3
+    assert len(payload["state"]["evidence"]) == 1
+    assert len(trace.judgments) == 3
 
 
 @pytest.mark.asyncio
