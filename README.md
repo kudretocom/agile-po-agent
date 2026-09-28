@@ -13,7 +13,7 @@ The project is intentionally opinionated: a language model may propose work, but
 
 The bounded PO flow now validates and uses Jev decisions before AutoGen drafting or revision. Installation and automated tests remain fully offline through deterministic HTTP fixtures. Jira writes still require explicit publish confirmation or a separate, authorized connector workflow.
 
-Wise's read-only four-state Assess core is implemented separately from the drafting CLI. It binds Jira reads to site/install context, checks versioned claim evidence, uses narrow TypeSafe Jev judgments, and emits `wise.assessment.v1` without Jira writes. See [the Assess contract](docs/wise-assess.md). Rovo deployment and source collectors are not yet included.
+Wise's read-only four-state Assess core is implemented separately from the drafting CLI. It binds Jira reads to site/install context, checks versioned claim evidence, uses narrow TypeSafe Jev judgments, and emits `wise.assessment.v1` without Jira writes. See [the Assess contract](docs/wise-assess.md). A non-production [Rovo/A2A pilot adapter](docs/wise-rovo-pilot.md) is available, but no Forge app has been deployed and non-Jira source collectors are not yet included.
 
 ## Architecture
 
