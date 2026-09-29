@@ -6,6 +6,7 @@ authenticates the invocation; only the user token may read that user's Jira issu
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from dataclasses import dataclass
@@ -298,6 +299,7 @@ class RovoPilot:
         self.jira_transport = jira_transport
         self._tasks: dict[tuple[str, str, str, str], tuple[str, str, str, dict[str, Any]]] = {}
         self._messages: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+        self._message_locks: dict[tuple[str, str, str, str], asyncio.Lock] = {}
 
     async def handle(self, headers: dict[str, str], payload: Any) -> tuple[int, dict[str, Any]]:
         authorization = headers.get("authorization", "")
@@ -348,6 +350,18 @@ class RovoPilot:
                 "Cannot assess without the invoking user's Jira access token. "
                 "Retry after access is available."
             )})
+        # Atlassian may retry while the first request is still evaluating. Serialize only
+        # the same message ID so concurrent retries do not duplicate a paid JEV judgment.
+        lock = self._message_locks.setdefault(message_key, asyncio.Lock())
+        async with lock:
+            return await self._send_message(
+                context, issue_key, message_key, user_token, request_id
+            )
+
+    async def _send_message(
+        self, context: ForgeContext, issue_key: str,
+        message_key: tuple[str, str, str, str], user_token: str, request_id: str | int,
+    ) -> tuple[int, dict[str, Any]]:
         duplicate = self._messages.get(message_key)
         if duplicate:
             if duplicate["issue_key"] != issue_key:
@@ -374,7 +388,10 @@ class RovoPilot:
         if len(self._tasks) > 256:
             self._tasks.pop(next(iter(self._tasks)))
         if len(self._messages) > 256:
-            self._messages.pop(next(iter(self._messages)))
+            oldest = next(iter(self._messages))
+            self._messages.pop(oldest)
+            if oldest != message_key:
+                self._message_locks.pop(oldest, None)
         return 200, _rpc_result(request_id, {"task": task})
 
     async def _assess(self, scope: Scope, cloud_id: str, user_token: str) -> Assessment:

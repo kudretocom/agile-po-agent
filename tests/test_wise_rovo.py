@@ -1,5 +1,6 @@
 """Offline A2A, FIT, and invoking-user Jira boundary tests."""
 
+import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -47,6 +48,12 @@ class SupportingJudge:
                                "insufficient": 0.01},
             ) for claim in claims],
         )
+
+
+class SlowSupportingJudge(SupportingJudge):
+    async def judge(self, claims: list[Claim], evidence: list[Evidence]) -> JevTrace:
+        await asyncio.sleep(0.05)
+        return await super().judge(claims, evidence)
 
 
 def fit(**changes: Any) -> str:
@@ -215,6 +222,25 @@ async def test_repeat_message_and_get_task_recheck_access_without_rejudging() ->
     })
     assert fetched["result"]["id"] == task_id
     assert len(calls) == 3
+
+
+@pytest.mark.asyncio
+async def test_concurrent_retry_reuses_one_jev_judgment() -> None:
+    description = (
+        ready_draft().to_markdown()
+        + "\n## Wise claims\n- issue: The Jira summary names a product task\n"
+    )
+    judge = SlowSupportingJudge()
+    app, calls, _ = pilot(
+        lambda _: httpx.Response(200, json=jira_issue(description)), judge=judge
+    )
+    headers = {"authorization": f"Bearer {fit()}", "x-forge-oauth-user": "user-oauth-token"}
+    (_, first), (_, second) = await asyncio.gather(
+        app.handle(headers, message()), app.handle(headers, message())
+    )
+    assert first["result"]["task"]["id"] == second["result"]["task"]["id"]
+    assert judge.calls == 1
+    assert len(calls) == 2  # initial read and retry's access/version check
 
 
 @pytest.mark.asyncio
