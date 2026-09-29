@@ -1,0 +1,38 @@
+# Non-production template only. Replace app.id and remote baseUrl before deployment.
+# Enabling rovo:agentConnector changes the app system user's mention behavior.
+app:
+  id: ari:cloud:ecosystem::app/REPLACE_WITH_FORGE_APP_UUID
+  name: wise-read-only-pilot
+
+modules:
+  rovo:agentConnector:
+    - key: wise-agent
+      name: Wise
+      description: Assess one Jira work item without changing it.
+      productContexts:
+        - jira
+      protocols:
+        agent2Agent:
+          version: '1.0'
+          jsonRpcTransport:
+            endpoint: wise-a2a-endpoint
+            streaming: false
+  endpoint:
+    - key: wise-a2a-endpoint
+      remote: wise-remote
+      route:
+        path: /a2a/json-rpc
+
+remotes:
+  - key: wise-remote
+    baseUrl: https://REPLACE_WITH_HTTPS_REMOTE
+    operations:
+      - compute
+    auth:
+      appUserToken:
+        enabled: true
+
+permissions:
+  scopes:
+    - read:app-user-token
+    - read:jira-work
