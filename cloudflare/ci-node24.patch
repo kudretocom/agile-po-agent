@@ -1,0 +1,17 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 3aea62d..c29de8d 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -25,3 +25,12 @@ jobs:
+       - run: ruff check .
+       - run: mypy
+       - run: pytest
++
++  cloudflare-storage-spike:
++    runs-on: ubuntu-latest
++    steps:
++      - uses: actions/checkout@v7
++      - uses: actions/setup-node@v6
++        with:
++          node-version: '24'
++      - run: node --test cloudflare/*.test.mjs
