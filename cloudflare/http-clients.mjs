@@ -25,12 +25,12 @@ const JWKS = 'https://forge.cdn.prod.atlassian-dev.net/.well-known/jwks.json';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export class ForgeVerifier {
-  constructor({ appId, endpointKey, environment = 'DEVELOPMENT', sites, fetcher = fetch, now = Date.now }) {
+  constructor({ appId, endpointKey, environment = 'DEVELOPMENT', sites, requirePrincipal = true, fetcher = fetch, now = Date.now }) {
     if (!appId?.startsWith('ari:cloud:ecosystem::app/') || !endpointKey
         || !['DEVELOPMENT', 'STAGING'].includes(environment) || !sites || !Object.keys(sites).length) {
       throw new Error('Explicit nonprod app/environment/site configuration required');
     }
-    Object.assign(this, { appId, endpointKey, environment, sites, fetcher, now });
+    Object.assign(this, { appId, endpointKey, environment, sites, requirePrincipal, fetcher, now });
   }
   async verify(authorization) {
     try {
@@ -59,7 +59,8 @@ export class ForgeVerifier {
       if (app?.id !== this.appId || app?.module?.key !== this.endpointKey
           || app?.module?.type !== 'core:endpoint' || app?.environment?.type !== this.environment
           || !app.installationId || (app.installation?.id && app.installation.id !== app.installationId)
-          || typeof claims.principal !== 'string' || !claims.principal || !UUID.test(ctx?.cloudId)) throw Error();
+          || (this.requirePrincipal && (typeof claims.principal !== 'string' || !claims.principal))
+          || !UUID.test(ctx?.cloudId)) throw Error();
       const site = new URL(ctx.siteUrl);
       if (site.protocol !== 'https:' || site.username || site.password || site.port
           || site.pathname !== '/' || site.search || site.hash
@@ -68,7 +69,7 @@ export class ForgeVerifier {
       const apiBaseUrl = `https://api.atlassian.com/ex/jira/${ctx.cloudId}`;
       if (app.apiBaseUrl !== apiBaseUrl) throw Error();
       return { installationId: app.installationId, cloudId: ctx.cloudId,
-        site: site.hostname, principal: claims.principal, apiBaseUrl };
+        site: site.hostname, principal: this.requirePrincipal ? claims.principal : '_lifecycle_', apiBaseUrl };
     } catch { throw new Error('Forge invocation could not be verified'); }
   }
 }
@@ -89,7 +90,7 @@ export class JiraUserClient {
     const f = raw.fields;
     if (raw.key !== scope.issueKey || !f || typeof f.summary !== 'string' || !f.summary.trim()
         || !f.issuetype?.name || !f.status?.name || typeof f.updated !== 'string'
-        || !Number.isFinite(Date.parse(f.updated)) || !/(?:Z|[+-]\d{2}:\d{2})$/.test(f.updated)) {
+        || !Number.isFinite(Date.parse(f.updated)) || !/(?:Z|[+-]\d{2}:?\d{2})$/.test(f.updated)) {
       throw Error('Invalid Jira snapshot');
     }
     return { key: raw.key, version: f.updated, summary: f.summary, description: f.description,
@@ -117,6 +118,7 @@ export class OpenAIAgentsClient {
     }
     return boundedJSON(response);
   }
+  async getAgent() { return this.call(this.segment(this.agentId), 'GET'); }
   async createSession(initialInput) {
     if (typeof initialInput !== 'string' || !initialInput.trim()) throw Error('Initial input required');
     const session = await this.call('sessions', 'POST', {
@@ -133,6 +135,24 @@ export class OpenAIAgentsClient {
     }] }, idempotencyKey);
   }
   async getSession(sessionId) { return this.call(`sessions/${this.segment(sessionId)}`, 'GET'); }
+  async listTurns(sessionId) {
+    return this.call(`sessions/${this.segment(sessionId)}/turns?order=desc&limit=10`, 'GET');
+  }
+  async getTurn(sessionId, turnId) {
+    return this.call(`sessions/${this.segment(sessionId)}/turns/${this.segment(turnId)}`, 'GET');
+  }
+  async listItems(sessionId, after) {
+    const query = new URLSearchParams({order:'desc',limit:'100'});
+    if (after) query.set('after', after);
+    return this.call(`sessions/${this.segment(sessionId)}/items?${query}`, 'GET');
+  }
+  async toolResult(sessionId, action, output) {
+    return this.call(`sessions/${this.segment(sessionId)}/events`, 'POST', {events:[{
+      type:'agent.session.input.tool_result', turn_id:action.turn_id,
+      call_id:action.call_id, success:true, output:JSON.stringify(output),
+    }]}, `wise-tool-${this.segment(action.turn_id)}-${this.segment(action.call_id)}`);
+  }
+  async deleteSession(sessionId) { return this.call(`sessions/${this.segment(sessionId)}`, 'DELETE'); }
   segment(value) {
     if (typeof value !== 'string' || !value || value.length > 256) throw Error('Invalid session ID');
     return encodeURIComponent(value);

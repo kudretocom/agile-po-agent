@@ -49,9 +49,9 @@ test('Jira client uses only invoking user GET and verified API route; mismatch f
     assert.equal(opts.method, 'GET'); assert.equal(opts.redirect, 'error');
     assert.equal(opts.headers.Authorization, 'Bearer fixture-user-token');
     return Response.json({ key: 'SCRUM-32', fields: { summary: 'Fixture scoped task', description: 'Evidence required',
-      issuetype: { name: 'Task' }, status: { name: 'Done' }, updated: '2026-09-30T23:00:00Z' } });
+      issuetype: { name: 'Task' }, status: { name: 'Done' }, updated: '2026-09-30T23:00:00.000+0000' } });
   } });
-  assert.equal((await client.read(scope, 'fixture-user-token')).version, '2026-09-30T23:00:00Z');
+  assert.equal((await client.read(scope, 'fixture-user-token')).version, '2026-09-30T23:00:00.000+0000');
   await assert.rejects(client.read({ ...scope, apiBaseUrl: 'https://evil.invalid' }, 'fixture-user-token'));
   await assert.rejects(client.read(scope, ''));
   assert.equal(calls, 1);
@@ -91,4 +91,15 @@ test('OpenAI execution is disabled by default, input capped and errors never aut
   assert.equal(calls, 0);
   await assert.rejects(client.createSession('fixture'), /Wise session request failed/);
   assert.equal(calls, 1);
+});
+
+test('principal-free lifecycle FIT is accepted only for separately bound lifecycle endpoint',async()=>{
+  const config={appId,endpointKey:'wise-lifecycle-endpoint',requirePrincipal:false,
+    sites:{[cloudId]:'fixture.atlassian.net'},now:()=>now,fetcher:async()=>Response.json({keys:[jwk]})};
+  const token=await sign({principal:null,app:{id:appId,apiBaseUrl,installationId:'fixture-install',
+    environment:{type:'DEVELOPMENT'},module:{key:'wise-lifecycle-endpoint',type:'core:endpoint'}}});
+  assert.equal((await new ForgeVerifier(config).verify(token)).principal,'_lifecycle_');
+  await assert.rejects(verifier().verify(token));
+  await assert.rejects(new ForgeVerifier({...config,requirePrincipal:true}).verify(token));
+  await assert.rejects(new ForgeVerifier(config).verify(await sign({})));
 });

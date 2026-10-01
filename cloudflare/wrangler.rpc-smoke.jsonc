@@ -1,0 +1,7 @@
+{
+  "name":"wise-rpc-local-smoke",
+  "main":"rpc-smoke-worker.mjs",
+  "compatibility_date":"2026-08-06",
+  "workers_dev":false,
+  "services":[{"binding":"TOOL","service":"wise-internal-assess-local"}]
+}

@@ -51,3 +51,16 @@ Official references checked 2026-09-30:
 - https://developers.cloudflare.com/durable-objects/platform/pricing/
 - https://developers.openai.com/api/docs/guides/agents-api/architecture
 
+
+## Runtime implementation update (2026-10-01)
+
+Local Workers/RPC/DO evidence now exists; it does not grant deployment access.
+The proposed install includes the same read-only scopes plus a dedicated
+preUninstall remote endpoint. Local metadata includes task issue keys for fresh
+permission checks, hashed scope/message/version, claim/task/session IDs and
+allowance counters. OpenAI session memory is retired at the proposed TTL; remote
+physical deletion and uncertain attempts require the demonstrated reconciliation
+process. Confirm this retention/data-processing scope in the concrete handoff.
+Runtime enablement, Assess/session/JEV allowances, JEV execution and retention
+provider deletion each default to disabled/unconfigured. Call counts are not a
+USD ceiling; constrain the approved provider agent/model/project budget too.

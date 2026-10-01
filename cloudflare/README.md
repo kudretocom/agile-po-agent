@@ -1,57 +1,92 @@
-# Wise Cloudflare runtime spike (SCRUM-60/61)
+# Wise Cloudflare runtime (SCRUM-60/61)
 
-This is local, dependency-free JavaScript, not a deployed Worker. It preserves the
-approved direction: Jira/Rovo → Cloudflare A2A entry → the same user/issue-specific
-OpenAI Wise session. Python Assess remains the authoritative deterministic core.
-The Python AutoGen/PyJWT/cryptography environment has **not** been demonstrated to
-run in Python Workers; this spike does not claim a direct Python deployment.
+Approved route: Jira/Rovo → Cloudflare → the same user/issue-specific OpenAI Wise
+session. The Python Assess core owns deterministic evidence/Definition of Ready
+checks. Assistant prose never becomes a Ready decision.
 
-`a2a-coordinator.mjs` binds a verified invocation, invoking-user Jira read, current
-issue version, replay ledger, and an injected agent client. FIT verification,
-real Jira/OpenAI transports, GetTask, lifecycle endpoints and the deterministic
-Assess tool binding still need implementation before installation. The agent
-client in tests is a fixture; checking the result envelope is not sufficient to
-prove a model-generated Ready decision. Real results must come from the Wise
-deterministic evidence and Definition of Ready gates.
+Implemented locally:
 
-`replay-ledger.mjs` uses the documented Durable Object storage
-`transaction/get/put` interface. Records contain hashed context/message/version,
-claim IDs, task IDs and session IDs. No credential, Jira description or model
-output is stored. Pending external calls remain pending after crashes or expiry;
-an operator must reconcile them before another paid attempt. This prevents a
-blind retry from causing another charge but does not promise exactly-once effects
-at an external provider. Session creation has its own reservation.
+- `runtime.mjs` composes actual FIT/Jira/OpenAI HTTP clients and the Python private
+  service binding. `/a2a/json-rpc` matches the existing Forge template. Execution
+  defaults to disabled; configure no credentials or allowances without the
+  concrete approved nonprod handoff.
+- `agent-loop.mjs` checks the saved/session agent (one `wise_assess` function,
+  no subagents, environment none), follows bounded session/turn state, executes
+  only server-collected input and submits the official tool_result envelope.
+  Result retrieval reads the matching function-call output, never model prose.
+  Timeouts, ambiguous turns and uncertain submissions require reconciliation.
+- `durable-ledger.mjs` uses real SQLite DO transactions and alarms. Scope keys
+  hash installation/cloud/site/principal/issue. Same-installation DO routing keeps
+  user memory keys isolated and serializes session invocations. The task index
+  includes an issue key for a fresh invoking-user permission/version GET; it
+  contains no Jira description, model output or credentials.
+- `GetTask` requires the same verified user, current Jira access/version and a
+  completed root-agent turn. Cached requests also recheck user access.
+- Default capacity is 1000 records. Session/Assess/JEV allowances are explicit,
+  never refunded after uncertainty and never automatically reset. They bound
+  invocation counts, not dollar cost; approval must also constrain the provider
+  agent/model/project budget.
+- Completed metadata is physically removed at TTL (default 24h, a proposed pilot
+  policy). Session memory retires at expiry; new turns stop until reconciliation.
+  Authorized remote session deletion is separately gated, with at most three
+  deletions per alarm. OpenAI deletion cleanup can itself be asynchronous.
+  Unknown charged attempts retain bounded tombstones for manual reconciliation.
+- The dedicated principal-free Forge `preUninstall` FIT endpoint disables only
+  its verified installation. It clears message/task metadata transactionally,
+  retaining session IDs/pending creation metadata only for cleanup/reconciliation.
+  Assessment FITs cannot invoke this endpoint. No Jira system token is used.
+- `python-worker/entry.py` exposes Assess over private RPC; its HTTP handler is
+  404. The existing TypeSafe client is bound behind explicit JEV enablement and
+  a DO JEV allowance. All live provider execution remains disabled.
 
-Every cached result retrieval requires a fresh invoking-user Jira access/version
-check. Memory is scoped to installation, cloud, site, principal and issue. Use
-the same immutable scope to route to a Durable Object. Never route by unverified
-payload identifiers. Never expose ledger operations through a public unauthenticated
-endpoint. No Worker entrypoint or deploy config is included yet.
+## Reproduction without deployment
 
-Run `node --test cloudflare/*.test.mjs` with Node 24. Tests include eight independent
-processes contending against a real temporary SQLite database, process restart,
-uncertain dispatch, metadata minimization, user access revocation, session reuse,
-scope boundaries, malformed A2A input and safe result rejection. SQLite storage
-fixtures exercise the storage contract; they do not emulate Cloudflare/workerd
-isolation or constitute a provider deployment test.
+Use Node 24: `node --test cloudflare/*.test.mjs` (28 tests).
+Install Miniflare 4 in an isolated local tools directory, then:
 
-Before a customer pilot: actual DO/workerd integration tests; bounded storage
-capacity; retention alarms and uninstall deletion; task retrieval with permission
-checks; install configuration; real FIT/Jira/OpenAI clients; reliable provider
-reconciliation; counters/budget limits; deterministic Python tool hosting decision.
-Completed-result TTL does not implement physical deletion or a full retention
-policy. Those remain SCRUM-61 acceptance criteria.
+```
+node cloudflare/workerd-smoke.mjs /absolute/path/to/miniflare/dist/src/index.js
+node cloudflare/python-worker/prepare-local.mjs
+```
 
-References checked 2026-09-30:
+In `cloudflare/python-worker`, with uv installed and its binary in PATH:
 
+```
+WRANGLER_SEND_METRICS=false uv run pywrangler dev --local --config wrangler.smoke.jsonc --port 8799
+```
+
+In `cloudflare`, start the **local-only** RPC harness:
+
+```
+WRANGLER_SEND_METRICS=false npx wrangler dev --local --config wrangler.rpc-smoke.jsonc --port 8798
+```
+
+Then from the repository root:
+
+```
+node cloudflare/python-workerd-smoke.mjs http://127.0.0.1:8798
+node cloudflare/runtime-composition-smoke.mjs http://127.0.0.1:8798
+```
+
+The latter uses actual JS coordinator/HTTP-client/loop code and real JS→Python
+Workers RPC; Jira/OpenAI transports are mocked. No Forge installation, live A2A,
+provider grant, model spend or deployment is represented by these results.
+Never deploy the smoke entry/config files. Keep emulator logs outside the watched
+Python project to prevent log writes from triggering reloads.
+
+Python packaging must use official pywrangler (lock files included); the old
+Miniflare PythonRequirement format is removed in current workerd. Tested local
+Python runtime: 3.13.2, pydantic 2.10.6, httpx 0.28.1. The prior standalone Pyodide
+3.14.2 smoke is separate evidence. Cloud resource CPU/startup limits, actual
+provider latency/usage, authentic installed FITs, uninstall delivery and remote
+physical cleanup still require a bounded authorized nonprod pilot. Node CI job
+remains a maintainer handoff in `ci-node24.patch`; no OAuth workflow expansion.
+
+Official references checked 2026-10-01:
+
+- https://developers.cloudflare.com/workers/languages/python/packages/
+- https://developers.cloudflare.com/workers/wrangler/configuration/
 - https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/
-- https://developers.cloudflare.com/durable-objects/platform/pricing/
-- https://developers.openai.com/api/docs/guides/agents-api/architecture
-
-
-Offline continuation (2026-10-01): `http-clients.mjs` supplies actual FIT/Jira/
-OpenAI HTTP adapters with mocked contract tests. They are not yet composed into
-an operational Worker or the deterministic tool/result loop. OpenAI execution
-is disabled by default. `python-wasm-smoke.mjs` demonstrated the Python Assess
-core in local Pyodide 3.14.2, with no JEV/provider call; Cloudflare ABI/runtime
-packaging remains unverified. No public deployment or credentials are included.
+- https://developers.openai.com/api/docs/guides/agents-api/tools/functions
+- https://developers.openai.com/api/docs/guides/agents-api/sessions/manage
+- https://developer.atlassian.com/platform/forge/manifest-reference/modules/pre-uninstall-trigger/

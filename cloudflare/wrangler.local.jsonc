@@ -1,0 +1,10 @@
+{
+  "name": "wise-a2a-local",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-08-06",
+  "workers_dev": false,
+  "vars": { "WISE_EXECUTION_ENABLED": "false" },
+  "durable_objects": { "bindings": [{"name":"WISE_LEDGER","class_name":"WiseLedger"}] },
+  "migrations": [{"tag":"v1-local","new_sqlite_classes":["WiseLedger"]}],
+  "services": [{"binding":"WISE_TOOL","service":"wise-internal-assess-local"}]
+}

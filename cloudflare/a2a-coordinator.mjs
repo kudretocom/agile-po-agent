@@ -11,6 +11,25 @@ export class A2ACoordinator {
     let context;
     try { context = await this.verifier.verify(headers.authorization); }
     catch { return [401, { error: 'Forge invocation could not be verified' }]; }
+    if (payload?.jsonrpc === '2.0' && payload.method === 'GetTask'
+        && ['string', 'number'].includes(typeof payload.id)) {
+      const token = headers['x-forge-oauth-user'];
+      if (typeof token !== 'string' || !token) return [200, rpcError(-32001, 'Invoking-user access required')];
+      try {
+        const record = await this.ledger.task(context, payload.params?.id);
+        const scope = { ...context, issueKey: record.issueKey };
+        const snapshot = await this.jira.read(scope, token);
+        if (snapshot.key !== scope.issueKey || !await this.ledger.matchesVersion(record, snapshot.version)) {
+          throw Error('Task version unavailable');
+        }
+        const sessionId = await this.ledger.session(scope);
+        if (!sessionId) throw Error('Session unavailable');
+        const task = await this.agent.readTask(sessionId, scope, payload.params.id);
+        this.validate(task, scope, snapshot.version);
+        if (task.id !== payload.params.id) throw Error('Task ID mismatch');
+        return [200, { jsonrpc: '2.0', id: payload.id, result: { task } }];
+      } catch { return [200, rpcError(-32001, 'Task unavailable; check current access and version')]; }
+    }
     const message = payload?.params?.message;
     const dataParts = Array.isArray(message?.parts)
       ? message.parts.filter(part => part?.data && typeof part.data === 'object') : [];
@@ -48,14 +67,7 @@ export class A2ACoordinator {
       const task = claim.dispatch
         ? await this.agent.assess(sessionId, scope, snapshot)
         : await this.agent.readTask(sessionId, scope, claim.taskId);
-      const report = task?.artifacts?.[0]?.parts?.[0]?.data;
-      if (!task?.id || !report || report.jira_changed !== false
-          || !['blocked', 'needs_evidence', 'needs_decision', 'ready'].includes(report.state)
-          || report.issue?.site !== scope.site || report.issue?.key !== issueKey
-          || report.issue?.installation_id !== scope.installationId
-          || report.issue?.version !== snapshot.version) {
-        throw new Error('Unverified assessment result');
-      }
+      this.validate(task, scope, snapshot.version);
       if (claim.dispatch) await this.ledger.complete(scope, message.messageId, claim.claimId, task.id);
       return [200, { jsonrpc: '2.0', id: payload.id, result: { task } }];
     } catch {
@@ -63,4 +75,13 @@ export class A2ACoordinator {
       return [200, rpcError(-32001, 'Assessment unavailable; check access or reconcile the attempt')];
     }
   }
+  validate(task, scope, version) {
+    const report = task?.artifacts?.[0]?.parts?.[0]?.data;
+    if (!task?.id || !report || report.jira_changed !== false
+        || !['blocked', 'needs_evidence', 'needs_decision', 'ready'].includes(report.state)
+        || report.issue?.site !== scope.site || report.issue?.key !== scope.issueKey
+        || report.issue?.installation_id !== scope.installationId
+        || report.issue?.version !== version) throw Error('Unverified assessment result');
+  }
+
 }

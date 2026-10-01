@@ -39,6 +39,12 @@ class SqliteStorage {
       throw error;
     }
   }
+  async list({ limit = 1000 } = {}) {
+    return new Map(this.db.prepare('SELECT key,value FROM records ORDER BY key LIMIT ?').all(limit)
+      .map(row => [row.key, JSON.parse(row.value)]));
+  }
+  async delete(key) { this.db.prepare('DELETE FROM records WHERE key=?').run(key); }
+  async deleteAll() { this.db.exec('DELETE FROM records'); }
   close() { this.db.close(); }
 }
 
@@ -115,9 +121,10 @@ if (process.argv[2] === 'claim-worker') {
       await ledger.complete(scope, 'private-message-text', claim.claimId, 'task');
       await assert.rejects(ledger.complete(scope, 'private-message-text', claim.claimId, 'other'), /mismatch/);
       const stored = JSON.stringify(storage.db.prepare('SELECT * FROM records').all());
-      for (const secret of ['private-message-text', 'private-version', scope.principal, scope.issueKey]) {
+      for (const secret of ['private-message-text', 'private-version', scope.principal]) {
         assert.equal(stored.includes(secret), false);
       }
+      assert.equal((await ledger.task(scope, 'task')).issueKey, scope.issueKey);
     } finally { storage.close(); f.cleanup(); }
   });
   test('unknown versions and malformed identities fail before persistence', async () => {

@@ -15,6 +15,9 @@ function fixture() {
   const storage = {
     get: async key => structuredClone(records.get(key)),
     put: async (key, value) => records.set(key, structuredClone(value)),
+    list: async ({ limit }) => new Map([...records.entries()].slice(0, limit)),
+    delete: async key => records.delete(key),
+    deleteAll: async () => records.clear(),
     transaction(fn) {
       const result = queue.then(() => fn(storage));
       queue = result.catch(() => {});
@@ -93,4 +96,70 @@ test('result claiming Jira mutation fails closed and is not completed or leaked'
   const f = fixture(); f.wrong();
   assert.ok((await f.app.handle(headers, request('m')))[1].error);
   assert.equal(Array.from(f.records.values()).some(value => value.state === 'complete'), false);
+});
+
+test('GetTask requires same verified principal, fresh permission and current version', async () => {
+  const f = fixture(); await f.app.handle(headers, request('m'));
+  const get = { jsonrpc: '2.0', id: 2, method: 'GetTask', params: { id: 'task-1' } };
+  assert.equal((await f.app.handle(headers, get))[1].result.task.id, 'task-1');
+  const before = f.calls.cached;
+  f.advance(); assert.ok((await f.app.handle(headers, get))[1].error);
+  assert.equal(f.calls.cached, before);
+  const other = fixture(); assert.ok((await other.app.handle(headers, get))[1].error);
+  f.deny(); assert.ok((await f.app.handle(headers, get))[1].error);
+});
+
+test('capacity blocks external work; cleanup deletes completed metadata but preserves uncertain claims', async () => {
+  const records = new Map(); let now = 0;
+  const storage = { get: async k => records.get(k), put: async (k,v) => records.set(k,v),
+    list: async ({limit}) => new Map([...records].slice(0, limit)),
+    delete: async k => records.delete(k), deleteAll: async () => records.clear(),
+    transaction: async fn => fn(storage) };
+  const scope = { ...context, issueKey: 'SCRUM-32' };
+  const ledger = new ReplayLedger(storage, {now:()=>now,ttlMs:10,maxRecords:3});
+  const first = await ledger.begin(scope, 'a', 'v1');
+  await ledger.complete(scope, 'a', first.claimId, 't1');
+  await ledger.begin(scope, 'uncertain', 'v1');
+  await assert.rejects(ledger.begin(scope, 'blocked', 'v1'), /capacity/);
+  now=11; assert.deepEqual(await ledger.cleanup(), {removed:2,pending:1});
+  await assert.rejects(ledger.task(context,'t1'));
+  assert.equal((await ledger.begin(scope,'uncertain','v1')).dispatch,false);
+  await ledger.uninstall(); assert.equal(records.size,1);
+  await assert.rejects(ledger.begin(scope,'after-uninstall','v1'), /disabled/);
+});
+
+test('retention retires session memory, denies new turns, and waits for authorized provider deletion',async()=>{
+  const records=new Map();let now=0;
+  const storage={get:async k=>records.get(k),put:async(k,v)=>records.set(k,v),
+    list:async({limit})=>new Map([...records].slice(0,limit)),delete:async k=>records.delete(k),
+    transaction:async fn=>fn(storage)};
+  const ledger=new ReplayLedger(storage,{now:()=>now,ttlMs:10});
+  const scope={...context,issueKey:'SCRUM-32'};
+  const claim=await ledger.reserveSession(scope);await ledger.completeSession(scope,claim.claimId,'s');
+  now=11;await ledger.cleanup();
+  await assert.rejects(ledger.reserveSession(scope),/retention/);
+  await assert.rejects(ledger.session(scope),/retention/);
+  await assert.rejects(ledger.deleteRetiredSessions({deleteSession:async()=>{throw Error('not authorized');}}));
+  assert.equal([...records.values()].some(r=>r.sessionId==='s'),true);
+  const deleted=[];assert.deepEqual(await ledger.deleteRetiredSessions({deleteSession:async id=>deleted.push(id)}),{deleted:1});
+  assert.deepEqual(deleted,['s']);assert.equal([...records.values()].some(r=>r.sessionId==='s'),false);
+  await assert.rejects(ledger.reserveSession(scope),/retention/);
+});
+
+test('cleanup rechecks a record inside its transaction and preserves a newly reserved pending claim',async()=>{
+  const records=new Map([['message:old',{state:'complete',expiresAt:1}]]);
+  const storage={get:async k=>records.get(k),put:async(k,v)=>records.set(k,v),delete:async k=>records.delete(k),
+    list:async()=>{const snapshot=new Map(records);records.set('message:old',{state:'pending',expiresAt:20});return snapshot;},
+    transaction:async fn=>fn(storage)};
+  assert.deepEqual(await new ReplayLedger(storage,{now:()=>10}).cleanup(),{removed:0,pending:0});
+  assert.equal(records.get('message:old').state,'pending');
+});
+
+test('pilot allowances are explicit, never refunded or automatically reset',async()=>{
+  const records=new Map();const storage={get:async k=>records.get(k),put:async(k,v)=>records.set(k,v),
+    list:async()=>new Map(records),transaction:async fn=>fn(storage)};
+  const ledger=new ReplayLedger(storage);
+  await assert.rejects(ledger.reserveBudget('assess',0),/Explicit/);
+  await ledger.reserveBudget('assess',1);
+  await assert.rejects(ledger.reserveBudget('assess',1),/exhausted/);
 });

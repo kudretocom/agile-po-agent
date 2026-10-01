@@ -1,0 +1,8 @@
+[project]
+name = "wise-internal-assess-worker"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["pydantic>=2.10,<3", "pydantic-settings>=2.7,<3", "httpx>=0.28,<1"]
+
+[dependency-groups]
+dev = ["workers-py", "workers-runtime-sdk"]
