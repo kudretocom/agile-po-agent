@@ -1,5 +1,15 @@
 # Bounded nonprod pilot handoff — proposed, not authorized
 
+Latest implementation/approval clarification: [pilot boundaries](wise-pilot-boundaries.md).
+US$1 is our proposal, not a user-selected or approved ceiling and not guaranteed
+by current Hosted Agents controls. No old installation exists per the complete
+old-thread read; there is no further owner metadata search prerequisite. New
+resources/consent and metered pilot with possible budget overshoot remain a
+separate decision. The original initialization model turn has been removed;
+an empty same-agent session is durably recorded before validation. Site/issue
+filter is now explicitly required before Jira/provider reads, while the grant
+itself remains broader than SCRUM-73. No live setup or provider call occurred.
+
 User selected AE development in **operoner.atlassian.net / SCRUM / SCRUM-73**.
 The site URL is known; permission for a development Forge install on this site
 remains unconfirmed, and it is not assumed to be a test site. Existing

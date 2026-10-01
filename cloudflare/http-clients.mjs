@@ -119,12 +119,14 @@ export class OpenAIAgentsClient {
     return boundedJSON(response);
   }
   async getAgent() { return this.call(this.segment(this.agentId), 'GET'); }
-  async createSession(initialInput) {
-    if (typeof initialInput !== 'string' || !initialInput.trim()) throw Error('Initial input required');
+  async createSession(initialInput,onCreated) {
+    if (initialInput!==undefined && (typeof initialInput !== 'string' || !initialInput.trim())) throw Error('Invalid initial input');
     const session = await this.call('sessions', 'POST', {
-      agent_id: this.agentId, environment: { type: 'none' }, input: initialInput, stream: false,
+      agent_id: this.agentId, environment: { type: 'none' }, ...(initialInput===undefined?{}:{input:initialInput}), stream: false,
     });
-    if (typeof session.id !== 'string' || !session.id || session.environment?.type !== 'none'
+    if (typeof session.id !== 'string' || !session.id || session.id.length>256) throw Error('Invalid session ID');
+    if(onCreated) await onCreated(session.id); // Persist identity before further response validation.
+    if (session.environment?.type !== 'none'
         || session.agent?.id !== this.agentId) throw Error('Session identity/environment mismatch');
     return session;
   }
@@ -135,6 +137,10 @@ export class OpenAIAgentsClient {
     }] }, idempotencyKey);
   }
   async getSession(sessionId) { return this.call(`sessions/${this.segment(sessionId)}`, 'GET'); }
+  async cancelTurn(sessionId) {
+    return this.call(`sessions/${this.segment(sessionId)}/events`, 'POST',
+      {events:[{type:'agent.session.input.cancel'}]},crypto.randomUUID());
+  }
   async listTurns(sessionId) {
     return this.call(`sessions/${this.segment(sessionId)}/turns?order=desc&limit=10`, 'GET');
   }

@@ -38,6 +38,7 @@ const fetcher=async(input,options={})=>{
   return Response.json(session());
 };
 const env={WISE_EXECUTION_ENABLED:'true',WISE_OPENAI_API_KEY:'fixture-only',WISE_OPENAI_AGENT_ID:'a',
+  PILOT_ISSUES_JSON:JSON.stringify({'fixture.atlassian.net':['SCRUM-32']}),
   PILOT_MAX_SESSIONS:'1',PILOT_MAX_ASSESSMENTS:'1',WISE_TOOL:{async assess(scope,snapshot){
     toolCalls++;const r=await fetch(local,{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({scope:JSON.parse(scope),snapshot:JSON.parse(snapshot)}),signal:AbortSignal.timeout(30_000)});

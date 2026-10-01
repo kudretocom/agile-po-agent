@@ -4,6 +4,14 @@ Approved route: Jira/Rovo → Cloudflare → the same user/issue-specific OpenAI
 session. The Python Assess core owns deterministic evidence/Definition of Ready
 checks. Assistant prose never becomes a Ready decision.
 
+Pilot enablement additionally requires explicit `PILOT_ISSUES_JSON`, e.g.
+`{"operoner.atlassian.net":["SCRUM-73"]}`; this is an application filter, not an
+issue-specific OAuth grant. Missing policy and non-allowlisted SendMessage or
+GetTask requests cannot reach Jira/provider reads. New sessions are created
+without an initialization input, and their IDs are durably quarantined before
+status validation. See [pilot boundaries](../docs/wise-pilot-boundaries.md) for
+creation uncertainty, explicit reconciliation/cancellation and budget limits.
+
 Implemented locally:
 
 - `runtime.mjs` composes actual FIT/Jira/OpenAI HTTP clients and the Python private

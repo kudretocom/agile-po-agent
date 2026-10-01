@@ -99,6 +99,7 @@ export class ReplayLedger {
       if (await txn.get('lifecycle:disabled')) throw Error('Installation disabled');
       const old = await txn.get(key);
       if (old?.retired || (old?.expiresAt && old.expiresAt <= this.now())) throw Error('Session retention expired');
+      if (old?.creationPending) return { dispatch: false, reconciliationRequired: true };
       if (old) return old.sessionId
         ? { dispatch: false, sessionId: old.sessionId }
         : { dispatch: false };
@@ -109,6 +110,25 @@ export class ReplayLedger {
     });
   }
 
+  async recordCreatedSession(scope,claimId,sessionId) {
+    if(typeof sessionId!=='string' || !sessionId || sessionId.length>256) throw Error('Invalid session ID');
+    const key=`session:${await scopeKey(scope)}`;
+    return this.storage.transaction(async txn=>{
+      const disabled=await txn.get('lifecycle:disabled');
+      const old=await txn.get(key);
+      if(!old || old.claimId!==claimId || old.sessionId) throw Error('Session claim mismatch');
+      // A create already in flight may return after uninstall. Keep its identity
+      // for authorized cleanup, while the disabled tombstone prevents all use.
+      await txn.put(key,{...old,sessionId,creationPending:true,expiresAt:this.now()+this.ttlMs,
+        ...(disabled||old.retired?{retired:true}:{})});
+    });
+  }
+  async createdSession(scope) {
+    if(await this.storage.get('lifecycle:disabled')) throw Error('Installation disabled');
+    const record=await this.storage.get(`session:${await scopeKey(scope)}`);
+    if(!record?.creationPending || record.retired || record.expiresAt<=this.now()) throw Error('Created session unavailable');
+    return {claimId:record.claimId,sessionId:record.sessionId};
+  }
   async completeSession(scope, claimId, sessionId) {
     if (typeof sessionId !== 'string' || !sessionId || sessionId.length > 256) {
       throw new Error('Invalid session ID');
@@ -117,7 +137,8 @@ export class ReplayLedger {
     return this.storage.transaction(async txn => {
       if (await txn.get('lifecycle:disabled')) throw Error('Installation disabled');
       const old = await txn.get(key);
-      if (!old || old.sessionId || old.claimId !== claimId) throw new Error('Session claim mismatch');
+      if (!old || old.retired || (old.expiresAt && old.expiresAt<=this.now()) || old.claimId !== claimId
+          || (old.sessionId && (!old.creationPending || old.sessionId!==sessionId))) throw new Error('Session claim mismatch');
       await txn.put(key, { sessionId, expiresAt: this.now() + this.ttlMs });
     });
   }
@@ -131,6 +152,7 @@ export class ReplayLedger {
     if (await this.storage.get('lifecycle:disabled')) throw Error('Installation disabled');
     const record = await this.storage.get(`session:${await scopeKey(scope)}`);
     if (record?.retired || (record?.expiresAt && record.expiresAt <= this.now())) throw Error('Session retention expired');
+    if(record?.creationPending) throw Error('Session creation requires reconciliation');
     return record?.sessionId;
   }
 

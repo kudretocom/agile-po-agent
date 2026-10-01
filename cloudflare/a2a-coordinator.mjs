@@ -2,7 +2,12 @@
  * The injected agent must expose ONLY the deterministic Wise Assess tool.
  */
 export class A2ACoordinator {
-  constructor({ verifier, jira, agent, ledger }) {
+  constructor({ verifier, jira, agent, ledger, allowedIssues = [] }) {
+    if (!Array.isArray(allowedIssues) || allowedIssues.length > 32
+        || allowedIssues.some(key => typeof key !== 'string' || !/^[A-Z][A-Z0-9]+-[0-9]+$/.test(key))) {
+      throw Error('Invalid pilot issue allowlist');
+    }
+    this.allowedIssues = new Set(allowedIssues);
     Object.assign(this, { verifier, jira, agent, ledger });
   }
 
@@ -17,6 +22,7 @@ export class A2ACoordinator {
       if (typeof token !== 'string' || !token) return [200, rpcError(-32001, 'Invoking-user access required')];
       try {
         const record = await this.ledger.task(context, payload.params?.id);
+        if (!this.allowedIssues.has(record.issueKey)) throw Error('Issue outside pilot');
         const scope = { ...context, issueKey: record.issueKey };
         const snapshot = await this.jira.read(scope, token);
         if (snapshot.key !== scope.issueKey || !await this.ledger.matchesVersion(record, snapshot.version)) {
@@ -46,6 +52,7 @@ export class A2ACoordinator {
     const token = headers['x-forge-oauth-user'];
     if (typeof token !== 'string' || !token) return [200, rpcError(-32001, 'Invoking-user access required')];
     const scope = { ...context, issueKey };
+    if (!this.allowedIssues.has(issueKey)) return [200, rpcError(-32001, 'Issue outside configured pilot')];
     try {
       // Mandatory every time, including cached results. No system-token fallback.
       const snapshot = await this.jira.read(scope, token);
@@ -56,7 +63,8 @@ export class A2ACoordinator {
       const session = await this.ledger.reserveSession(scope);
       let sessionId = session.sessionId;
       if (session.dispatch) {
-        sessionId = await this.agent.createSession(scope, { environment: { type: 'none' } });
+        sessionId = await this.agent.createSession(scope, { environment: { type: 'none' } },
+          id=>this.ledger.recordCreatedSession(scope,session.claimId,id));
         await this.ledger.completeSession(scope, session.claimId, sessionId);
       }
       if (!sessionId) return [200, rpcError(-32002, 'Session requires reconciliation; no automatic retry')];

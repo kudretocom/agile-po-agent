@@ -1,12 +1,32 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import runtime,{coordinatorFor} from './runtime.mjs';
+import runtime,{coordinatorFor,pilotIssuesFor} from './runtime.mjs';
 
 test('actual runtime disables pilot before credentials, namespace or provider access',async()=>{
   const r=await runtime.fetch(new Request('https://local.invalid/a2a/json-rpc',{method:'POST',body:'{}'}),{});
   assert.equal(r.status,503);
   assert.equal((await runtime.fetch(new Request('https://local.invalid/'),{})).status,404);
   assert.throws(()=>coordinatorFor({},null,{}),/unavailable/);
+});
+
+test('enabled runtime requires explicit valid site/issue policy before FIT or durable/provider access',async()=>{
+  for(const raw of [undefined,'null','[]','{}','{"fixture.atlassian.net":["*"]}',
+    '{"fixture.atlassian.net":["SCRUM-73","SCRUM-73"]}']) {
+    const env={WISE_EXECUTION_ENABLED:'true',PILOT_ISSUES_JSON:raw};
+    const r=await runtime.fetch(new Request('https://local.invalid/a2a/json-rpc',{method:'POST',body:'{}'}),env);
+    assert.equal(r.status,503);
+  }
+  const env={WISE_EXECUTION_ENABLED:'true',PILOT_ISSUES_JSON:JSON.stringify({'fixture.atlassian.net':['SCRUM-73']}),
+    WISE_OPENAI_API_KEY:'fixture-only',WISE_OPENAI_AGENT_ID:'fixture',
+    WISE_TOOL:{assess(){throw Error('No tool allowed');}}};
+  assert.deepEqual(pilotIssuesFor(env,'fixture.atlassian.net'),['SCRUM-73']);
+  assert.throws(()=>pilotIssuesFor(env,'other.atlassian.net'),/outside/);
+  let fetchCalls=0;
+  const app=coordinatorFor(env,null,{site:'fixture.atlassian.net',principal:'u'},async()=>{fetchCalls++;throw Error();});
+  const payload={jsonrpc:'2.0',id:1,method:'SendMessage',params:{message:{role:'ROLE_USER',messageId:'m',parts:[{data:{
+    userAccountId:'u',invocationType:'ISSUE_COMMENT_MENTION',issue:{fields:{key:'SCRUM-74'}}}}]}}};
+  assert.ok((await app.handle({'x-forge-oauth-user':'fixture'},payload))[1].error);
+  assert.equal(fetchCalls,0);
 });
 
 test('pre-uninstall route uses dedicated signed endpoint and installation scope, ignoring untrusted body',async(t)=>{

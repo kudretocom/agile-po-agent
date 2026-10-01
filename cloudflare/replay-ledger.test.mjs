@@ -127,6 +127,33 @@ if (process.argv[2] === 'claim-worker') {
       assert.equal((await ledger.task(scope, 'task')).issueKey, scope.issueKey);
     } finally { storage.close(); f.cleanup(); }
   });
+  test('created-session identity survives SQLite restart, stays quarantined until explicit completion', async () => {
+    const f=fixture();let storage=new SqliteStorage(f.path);
+    try {
+      let ledger=new ReplayLedger(storage);
+      const claim=await ledger.reserveSession(scope);
+      await ledger.recordCreatedSession(scope,claim.claimId,'known-session');
+      storage.close();storage=new SqliteStorage(f.path);ledger=new ReplayLedger(storage);
+      assert.deepEqual(await ledger.createdSession(scope),{claimId:claim.claimId,sessionId:'known-session'});
+      assert.deepEqual(await ledger.reserveSession(scope),{dispatch:false,reconciliationRequired:true});
+      await assert.rejects(ledger.session(scope),/reconciliation/);
+      await assert.rejects(ledger.completeSession(scope,claim.claimId,'other'),/mismatch/);
+      await ledger.completeSession(scope,claim.claimId,'known-session');
+      assert.deepEqual(await ledger.reserveSession(scope),{dispatch:false,sessionId:'known-session'});
+    } finally {storage.close();f.cleanup();}
+  });
+  test('session returned after uninstall is retained only for cleanup; retired completion cannot reactivate',async()=>{
+    const f=fixture();const storage=new SqliteStorage(f.path);
+    try {
+      const ledger=new ReplayLedger(storage);const claim=await ledger.reserveSession(scope);
+      await ledger.uninstall();await ledger.recordCreatedSession(scope,claim.claimId,'late-session');
+      const record=await storage.get(`session:${await scopeKey(scope)}`);
+      assert.equal(record.retired,true);assert.equal(record.sessionId,'late-session');
+      await assert.rejects(ledger.reserveSession(scope),/disabled/);
+      await assert.rejects(ledger.completeSession(scope,claim.claimId,'late-session'),/disabled/);
+      await assert.rejects(ledger.createdSession(scope),/disabled/);
+    } finally {storage.close();f.cleanup();}
+  });
   test('unknown versions and malformed identities fail before persistence', async () => {
     const f = fixture(); const storage = new SqliteStorage(f.path);
     try {

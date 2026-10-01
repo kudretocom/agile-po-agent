@@ -10,7 +10,7 @@ const request = messageId => ({ jsonrpc: '2.0', id: 1, method: 'SendMessage', pa
     userAccountId: 'user', invocationType: 'ISSUE_COMMENT_MENTION', issue: { fields: { key: 'SCRUM-32' } },
   } }],
 } } });
-function fixture() {
+function fixture(allowedIssues=['SCRUM-32'],creationFailure='') {
   const records = new Map(); let queue = Promise.resolve();
   const storage = {
     get: async key => structuredClone(records.get(key)),
@@ -28,6 +28,7 @@ function fixture() {
   let denied = false, wrongResult = false, version = 'v1', crash = false;
   const tasks = new Map();
   const dependencies = {
+    allowedIssues,
     ledger: new ReplayLedger(storage),
     verifier: { async verify(value) { if (value !== 'fixture-fit') throw Error(); return context; } },
     jira: { async read(scope, token) {
@@ -37,8 +38,11 @@ function fixture() {
       return { key: scope.issueKey, version };
     } },
     agent: {
-      async createSession(scope, options) {
+      async createSession(scope, options,onCreated) {
         calls.creates++; assert.deepEqual(options, { environment: { type: 'none' } });
+        if(creationFailure==='unknown') throw Error('Create response uncertain');
+        await onCreated('session');
+        if(creationFailure==='known') throw Error('Created session validation failed');
         return 'session';
       },
       async assess(sessionId, scope, snapshot) {
@@ -53,7 +57,7 @@ function fixture() {
       async readTask(sessionId, scope, taskId) { calls.cached++; return tasks.get(taskId); },
     },
   };
-  return { app: new A2ACoordinator(dependencies), calls, records,
+  return { app: new A2ACoordinator(dependencies), dependencies, calls, records,
     deny: () => { denied = true; }, wrong: () => { wrongResult = true; },
     advance: () => { version = 'v2'; }, crash: () => { crash = true; } };
 }
@@ -64,6 +68,32 @@ test('A2A replay rechecks Jira and continues same session without another assess
   assert.deepEqual(await f.app.handle(headers, request('m')), first);
   await f.app.handle(headers, request('m2'));
   assert.deepEqual(f.calls, { reads: 3, creates: 1, assess: 2, cached: 1 });
+});
+
+test('pilot denies other issues or absent allowlist before Jira, storage reservation and provider',async()=>{
+  for(const keys of [[],['SCRUM-73']]) {
+    const f=fixture(keys);
+    assert.ok((await f.app.handle(headers,request('outside')))[1].error);
+    assert.deepEqual(f.calls,{reads:0,creates:0,assess:0,cached:0});assert.equal(f.records.size,0);
+  }
+});
+test('GetTask rechecks current allowlist before Jira or provider, including an existing indexed task',async()=>{
+  const f=fixture();await f.app.handle(headers,request('m'));
+  const restricted=new A2ACoordinator({...f.dependencies,allowedIssues:['SCRUM-73']});
+  assert.ok((await restricted.handle(headers,{jsonrpc:'2.0',id:2,method:'GetTask',params:{id:'task-1'}}))[1].error);
+  assert.deepEqual(f.calls,{reads:1,creates:1,assess:1,cached:0});
+});
+test('known and unknown create failures survive coordinator restart without another session dispatch',async()=>{
+  for(const failure of ['known','unknown']) {
+    const f=fixture(['SCRUM-32'],failure);
+    assert.ok((await f.app.handle(headers,request('m')))[1].error);
+    const record=[...f.records.entries()].find(([key])=>key.startsWith('session:'))[1];
+    assert.equal(record.sessionId,failure==='known'?'session':undefined);
+    if(failure==='known') assert.equal(record.creationPending,true);
+    const restarted=new A2ACoordinator(f.dependencies);
+    assert.ok((await restarted.handle(headers,request('new-message')))[1].error);
+    assert.equal(f.calls.creates,1);assert.equal(f.calls.assess,0);
+  }
 });
 test('revoked user access denies cached task before session/provider work', async () => {
   const f = fixture(); await f.app.handle(headers, request('m')); f.deny();

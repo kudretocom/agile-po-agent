@@ -12,20 +12,36 @@ export class WiseAgentLoop {
         || session.agent?.tools?.length!==1 || session.agent.tools[0].type!=='function'
         || session.agent.tools[0].name!=='wise_assess') throw Error('Unsafe Wise session configuration');
   }
-  async createSession() {
+  async createSession(scope,options,onCreated) {
+    if(typeof onCreated!=='function') throw Error('Durable session binding required');
     const agent=await this.client.getAgent();
     if(agent.id!==this.client.agentId || agent.multi_agent?.enabled!==false || agent.tools?.length!==1
         || agent.tools[0].type!=='function' || agent.tools[0].name!=='wise_assess') throw Error('Unsafe saved Wise agent');
     await this.ledger.reserveBudget('session',this.allowances.sessions);
-    const session=await this.client.createSession('Initialize Wise. Wait for the next input; do not call tools.');
+    // Official create input is optional. An empty session starts no initialization model turn.
+    const session=await this.client.createSession(undefined,onCreated);
     this.check(session,session.id);
-    for(let n=0;n<this.maxPolls;n++) {
-      const current=await this.client.getSession(session.id); this.check(current,session.id);
-      if(current.status==='idle') return session.id;
-      if(current.status!=='in_progress') throw Error('Initialization requires reconciliation');
-      await this.pause();
+    if(session.status!=='idle') throw Error('Created session requires reconciliation; do not recreate');
+    return session.id;
+  }
+  async reconcileCreatedSession(scope,claimId,sessionId) {
+    const record=await this.ledger.createdSession(scope);
+    if(record?.claimId!==claimId || record.sessionId!==sessionId) throw Error('Session claim mismatch');
+    const current=await this.client.getSession(sessionId);this.check(current,sessionId);
+    const turns=await this.client.listTurns(sessionId);
+    if(current.status!=='idle' || !Array.isArray(turns.data) || turns.data.length || turns.has_more) {
+      throw Error('Created session not safely idle');
     }
-    throw Error('Initialization timed out; do not recreate automatically');
+    // Explicit reconciliation of the SAME known empty session, never a new create/send.
+    await this.ledger.completeSession(scope,claimId,sessionId);
+  }
+  async cancelActiveTurn(sessionId) {
+    const current=await this.client.getSession(sessionId);this.check(current,sessionId);
+    if(current.status==='idle') return {requested:false,terminal:true};
+    if(!['in_progress','requires_action'].includes(current.status)) throw Error('Session requires reconciliation');
+    await this.client.cancelTurn(sessionId);
+    // Acknowledgement is not terminal/cost proof. Caller must read session+turn afterwards.
+    return {requested:true,terminal:false};
   }
   async assess(sessionId,scope,snapshot) {
     const before=await this.client.getSession(sessionId); this.check(before,sessionId);
