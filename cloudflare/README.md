@@ -48,3 +48,10 @@ References checked 2026-09-30:
 - https://developers.cloudflare.com/durable-objects/platform/pricing/
 - https://developers.openai.com/api/docs/guides/agents-api/architecture
 
+
+Offline continuation (2026-10-01): `http-clients.mjs` supplies actual FIT/Jira/
+OpenAI HTTP adapters with mocked contract tests. They are not yet composed into
+an operational Worker or the deterministic tool/result loop. OpenAI execution
+is disabled by default. `python-wasm-smoke.mjs` demonstrated the Python Assess
+core in local Pyodide 3.14.2, with no JEV/provider call; Cloudflare ABI/runtime
+packaging remains unverified. No public deployment or credentials are included.

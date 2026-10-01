@@ -51,3 +51,28 @@ Remaining implementation is explicit: real client adapters and deterministic cor
 tool binding; GetTask and install/uninstall flows; DO capacity/retention/cleanup;
 collectors and free-form Turkish normalization; actual runtime/provider tests.
 The local spike is reviewable implementation evidence, not release completion.
+
+## Offline continuation, 2026-10-01
+
+- Actual HTTP adapters added: WebCrypto RS256 FIT verification against the fixed
+  Atlassian JWKS, approved app/module/environment/site binding, signed Jira API
+  route and invoking-user GET; OpenAI Agents create/retrieve/same-session input
+  events with the documented beta header. Provider execution defaults to disabled.
+- 17 Node tests pass, including mocked official HTTP envelopes, JWT tampering,
+  environment/site rejection, bounded request/response bodies and no automatic
+  retry after provider uncertainty. These are contract tests, not live A2A.
+- Python Assess ran inside local Pyodide 314.0.7 / Python 3.14.2 with actual
+  pydantic/httpx/pydantic-settings packages and the minimized SCRUM-32 fixture:
+  needs_evidence, jira_changed=false, zero JEV calls. Reproduce with
+  `node cloudflare/python-wasm-smoke.mjs <installed-pyodide.mjs-path>`.
+  Public dependency downloads occur during this optional smoke. This does not
+  establish Cloudflare's selected Python ABI, workerd packaging or deployment.
+- Turkish `## Wise iddiaları` is an explicit alias of `## Wise claims`; typed
+  claim keys remain canonical. Multiple sections, >32 claims and >2000-character
+  claims fail closed rather than inferring assertions from ordinary prose.
+- Biggest implementation blocker: host the deterministic Assess tool in the
+  actual Workers runtime and bind the OpenAI required-actions/turn-result loop.
+  No nonprod site, install, grants or paid calls are needed to continue offline
+  implementation. Live deployment/pilot still requires the concrete approval
+  handoff; none has been performed. JS GetTask/lifecycle/physical-retention/caps
+  remain open (Python GetTask tests are not JS runtime evidence).

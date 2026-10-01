@@ -140,9 +140,10 @@ def _issue_from_message(message: Any, context: ForgeContext) -> tuple[str, str]:
 def _declared_claims(description: str, source_id: str) -> list[Claim]:
     """Only explicit, typed pilot claims are assessed; never infer them from prose."""
 
-    match = re.search(r"(?im)^## Wise claims\s*$", description)
-    if not match:
+    matches = list(re.finditer(r"(?im)^## Wise (?:claims|iddiaları)\s*$", description))
+    if len(matches) != 1:
         return []
+    match = matches[0]
     section = re.split(r"(?m)^## ", description[match.end():], maxsplit=1)[0]
     claims: list[Claim] = []
     for line in section.splitlines():
@@ -153,6 +154,8 @@ def _declared_claims(description: str, source_id: str) -> list[Claim]:
         if not declared:
             return []
         kind = ClaimKind(declared.group(1))
+        if len(claims) >= 32 or len(declared.group(2)) > 2000:
+            return []
         claims.append(Claim(
             claim_id=f"claim-{len(claims) + 1}", text=declared.group(2), kind=kind,
             source_ids=[source_id] if kind == ClaimKind.ISSUE else [],
