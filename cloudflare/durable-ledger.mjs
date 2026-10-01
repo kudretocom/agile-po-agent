@@ -13,7 +13,7 @@ export class WiseLedger extends DurableObject {
     this.invocations = Promise.resolve();
   }
   async invoke(context, headers, payload) {
-    const run = this.invocations.then(() => coordinatorFor(this.env, this.ledger, context).handle(headers,payload));
+    const run = this.invocations.then(() => coordinatorFor(this.env, this.ledger, context, fetch, headers['x-forge-oauth-user']).handle(headers,payload));
     this.invocations = run.catch(() => {});
     return run.finally(() => this.schedule());
   }

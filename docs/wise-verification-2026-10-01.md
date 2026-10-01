@@ -5,7 +5,7 @@ Route remains Cloudflare + the same OpenAI Wise user/issue session.
 
 ## Evidence
 
-- 78 Python tests; Ruff across the repository and mypy (15 source files) pass.
+- 87 Python tests; Ruff across the repository and mypy (17 source files) pass.
 - 28 Node tests: actual WebCrypto FIT verification, user-token Jira HTTP,
   same-session OpenAI tool-result contract, GetTask, revoked access/current
   versions, replay/multiworker uncertainty, storage capacity, cleanup race,
@@ -50,8 +50,12 @@ metadata. Full deletion cannot be promised before that process is demonstrated.
   genuine installed FIT/Jira/Rovo/OpenAI A2A and cloud metrics pending.
 - SCRUM-61: GetTask/lifecycle/caps/alarms/race-safe deletion implemented and tested;
   real uninstall/provider deletion/uncertain-provider reconciliation pending.
-- SCRUM-62: canonical Turkish claim collector and strict deterministic host tested;
-  wider authorized versioned evidence collectors not claimed complete.
+- SCRUM-62: free-form Turkish candidates remain untyped/review-required; actual
+  allowlisted GitHub Contents/commit-checks and Confluence current-page GET
+  contracts are implemented with immutable/expected versions, denied/missing/
+  stale distinctions, no redirects, bounded responses and full caller-scope
+  source plans (three refs maximum). Mock tests pass; live source grants and
+  reference selection remain disabled. No full real-work collector pilot claimed.
 - SCRUM-63: target nonprod site/install/grants/bounded spend/live participant
   identity still need the concrete approval handoff.
 - SCRUM-64: listing/privacy/support/assets/partner verification/legal submission

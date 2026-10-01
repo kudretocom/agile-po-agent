@@ -90,3 +90,28 @@ Official references checked 2026-10-01:
 - https://developers.openai.com/api/docs/guides/agents-api/tools/functions
 - https://developers.openai.com/api/docs/guides/agents-api/sessions/manage
 - https://developer.atlassian.com/platform/forge/manifest-reference/modules/pre-uninstall-trigger/
+
+## Optional source collectors (SCRUM-62)
+
+`wise_evidence.py` binds actual fixed-host GET contracts to allowlisted GitHub
+file/check refs and current Confluence pages. GitHub uses full commit SHAs and
+API version2026-03-10; Confluence compares current page version with the approved
+expected version, so fetching a historical version cannot pretend to be current.
+Responses are bounded, redirects are never followed, and denied/missing/stale
+remain distinct. URLs alone are not evidence. Free-form Turkish candidates stay
+untyped and review-required, with no authority to make Ready or execute tools.
+
+`WISE_SOURCES_ENABLED` defaults off. `WISE_SOURCE_PLAN_JSON` must match all five
+verified installation/cloud/site/principal/issue fields and contains at most three
+operator-selected refs. Optional activation needs the exact source scope/data
+review, a scoped GitHub read credential (Contents/read, Checks/read for CI) and/or
+Confluence `read:page:confluence` grant. No such grant is added to the baseline
+Forge manifest or requested automatically. The existing invoking-user token is
+passed transiently through private RPC only for an authorized Confluence read;
+it is never stored, included in model input or returned in evidence. Optional
+source credentials must not reuse unrelated production credentials.
+
+Official contracts checked2026-10-01:
+https://docs.github.com/en/rest/repos/contents
+https://docs.github.com/en/rest/checks/runs
+https://developer.atlassian.com/cloud/confluence/rest/v2/api-group-page/

@@ -7,18 +7,18 @@ export function verifierFor(env,fetcher=fetch,lifecycle=false) {
   return new ForgeVerifier({appId:env.FORGE_APP_ID,endpointKey:lifecycle?env.FORGE_LIFECYCLE_ENDPOINT_KEY:env.FORGE_ENDPOINT_KEY,
     environment:env.FORGE_ENVIRONMENT,sites:JSON.parse(env.NONPROD_SITES_JSON),requirePrincipal:!lifecycle,fetcher});
 }
-export function coordinatorFor(env,ledger,context,fetcher=fetch) {
+export function coordinatorFor(env,ledger,context,fetcher=fetch,userToken='') {
   if(env.WISE_EXECUTION_ENABLED!=='true' || !env.WISE_TOOL?.assess) throw Error('Execution unavailable');
   const client=new OpenAIAgentsClient({apiKey:env.WISE_OPENAI_API_KEY,agentId:env.WISE_OPENAI_AGENT_ID,
     enabled:true,fetcher});
   const tool={async assess(scope,snapshot) {
-    const raw=await env.WISE_TOOL.assess(JSON.stringify(scope),JSON.stringify(snapshot));
+    const raw=await env.WISE_TOOL.assess(JSON.stringify(scope),JSON.stringify(snapshot),userToken);
     if(typeof raw!=='string' || new TextEncoder().encode(raw).length>256_000) throw Error('Invalid tool response');
     const preliminary=JSON.parse(raw);
     if(preliminary.jev_required && env.WISE_JEV_EXECUTION_ENABLED==='true') {
       if(typeof env.WISE_TOOL.assessWithJev!=='function') throw Error('JEV tool unavailable');
       await ledger.reserveBudget('jev',Number(env.PILOT_MAX_JEV_CALLS));
-      const judged=await env.WISE_TOOL.assessWithJev(JSON.stringify(scope),JSON.stringify(snapshot));
+      const judged=await env.WISE_TOOL.assessWithJev(JSON.stringify(scope),JSON.stringify(snapshot),userToken);
       if(typeof judged!=='string' || new TextEncoder().encode(judged).length>256_000) throw Error('Invalid JEV result');
       return JSON.parse(judged);
     }

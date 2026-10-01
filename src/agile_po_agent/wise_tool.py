@@ -18,6 +18,7 @@ from agile_po_agent.wise_assess import (
     WiseAssessor,
 )
 from agile_po_agent.wise_collectors import _adf_markdown, _declared_claims, _normalized_draft
+from agile_po_agent.wise_evidence import turkish_candidates
 
 
 class OfflineJudge:
@@ -29,6 +30,7 @@ class OfflineJudge:
 
 async def assess_verified_snapshot(
     scope: dict[str, Any], snapshot: dict[str, Any], judge: Judge | None = None,
+    additional_evidence: list[Evidence] | None = None,
 ) -> dict[str, Any]:
     """Only expose over a private service binding behind FIT/user access checks."""
     verified = Scope(installation_id=scope["installationId"], site=scope["site"],
@@ -50,9 +52,12 @@ async def assess_verified_snapshot(
                         access="available", freshness="current", finding=description)
     gate = judge if judge is not None else OfflineJudge()
     report = await WiseAssessor(Settings(), gate).assess(AssessmentInput(
-        snapshot=item, evidence=[evidence], claims=_declared_claims(description, "jira-issue"),
+        snapshot=item, evidence=[evidence, *(additional_evidence or [])],
+        claims=_declared_claims(description, "jira-issue"),
         normalized_draft=_normalized_draft(item),
     ))
     result = report.model_dump(mode="json", by_alias=True)
+    result["claim_candidates"] = (turkish_candidates(description)
+                                  if not _declared_claims(description, "jira-issue") else [])
     result["jev_required"] = isinstance(gate, OfflineJudge) and gate.called
     return result
