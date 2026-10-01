@@ -318,6 +318,19 @@ def test_only_explicit_typed_claims_are_accepted() -> None:
     assert claims[1].source_ids == []
 
 
+def test_turkish_claim_heading_preserves_types_and_rejects_ambiguous_or_excess_input() -> None:
+    from agile_po_agent.wise_rovo import _declared_claims
+
+    text = "## Wise iddiaları\n- code_behavior: Tenant sınırı kodda korunur\n"
+    claims = _declared_claims(text, "jira-issue")
+    assert len(claims) == 1
+    assert claims[0].text == "Tenant sınırı kodda korunur"
+    assert claims[0].source_ids == []
+    assert _declared_claims(text + "## Wise claims\n- issue: Other\n", "jira-issue") == []
+    assert _declared_claims("## Wise iddiaları\n- issue: " + "x" * 2001, "jira") == []
+    assert _declared_claims("## Wise iddiaları\n" + "- issue: Item\n" * 33, "jira") == []
+
+
 @pytest.mark.asyncio
 async def test_template_issue_with_explicit_jira_claim_can_reach_jev() -> None:
     description = (

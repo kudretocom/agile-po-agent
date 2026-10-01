@@ -1,0 +1,16 @@
+{
+  "name": "wise-internal-assess-local",
+  "main": "bundle/entry.py",
+  "compatibility_date": "2026-08-06",
+  "compatibility_flags": [
+    "python_workers"
+  ],
+  "workers_dev": false,
+  "python_modules": {
+    "exclude": [
+      "**/*.pyc",
+      "**/__pycache__",
+      "**/tests/**"
+    ]
+  }
+}

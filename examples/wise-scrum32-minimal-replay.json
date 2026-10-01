@@ -1,0 +1,38 @@
+{
+  "fixture_kind": "minimized_read_only_source_replay",
+  "live_a2a": false,
+  "jira_read_via": "authorized Atlassian Rovo getJiraIssue",
+  "source_uri": "https://operoner.atlassian.net/browse/SCRUM-32",
+  "source_updated": "2026-09-29T21:10:28.434+0300",
+  "content_complete": false,
+  "scope": {
+    "installation_id": "local-source-replay-not-forge-install",
+    "site": "operoner.atlassian.net",
+    "issue_key": "SCRUM-32"
+  },
+  "issue": {
+    "key": "SCRUM-32",
+    "fields": {
+      "summary": "[BüroOS] Faz 0 teknik keşif ve uygulama sözleşmesini doğrula",
+      "description": "## Kabul kriterleri\nConnected grant ve external client ilişkisinin neden ayrı kalacağı kod/şema kanıtıyla açıklanır.\n## Wise claims\n- code_behavior: Connected grant ve external client ilişkisi ayrı veri ve yetki sınırları gerektirir.",
+      "issuetype": {
+        "id": "10003",
+        "name": "Task"
+      },
+      "status": {
+        "name": "Done",
+        "statusCategory": {
+          "name": "Done"
+        }
+      },
+      "updated": "2026-09-29T21:10:28.434+0300",
+      "issuelinks": []
+    }
+  },
+  "expected": {
+    "state": "needs_evidence",
+    "jira_changed": false,
+    "jev_calls": 0,
+    "reason": "No repository commit/schema evidence; minimized Turkish excerpt has no normalized Definition of Ready."
+  }
+}

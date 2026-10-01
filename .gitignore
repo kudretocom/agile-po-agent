@@ -13,3 +13,9 @@ build/
 *.egg-info/
 drafts/
 
+.wrangler/
+cloudflare/python-worker/agile_po_agent/
+cloudflare/python-worker/.venv-workers/
+cloudflare/python-worker/python_modules/
+cloudflare/python-worker/local-runtime.log
+cloudflare/python-worker/bundle/
