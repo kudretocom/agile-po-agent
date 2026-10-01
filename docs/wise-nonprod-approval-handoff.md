@@ -1,7 +1,8 @@
 # Bounded nonprod pilot handoff — proposed, not authorized
 
-Target Jira nonprod **site URL is pending user response**. The only connected site
-observed is operoner.atlassian.net; it is not assumed to be a test site. Existing
+User selected AE development in **operoner.atlassian.net / SCRUM / SCRUM-73**.
+The site URL is known; permission for a development Forge install on this site
+remains unconfirmed, and it is not assumed to be a test site. Existing
 SCRUM-32 was read through the authorized connector and minimized for offline
 testing. No installation, OAuth grant or spend has occurred.
 
@@ -64,3 +65,36 @@ process. Confirm this retention/data-processing scope in the concrete handoff.
 Runtime enablement, Assess/session/JEV allowances, JEV execution and retention
 provider deletion each default to disabled/unconfigured. Call counts are not a
 USD ceiling; constrain the approved provider agent/model/project budget too.
+
+## User-selected AE scenario (2026-10-01)
+
+This scenario supersedes the SCRUM-32 brief above. Use existing SCRUM-73 only,
+with SCRUM-72 epic as optional context. Brief: “Assess daily accounting
+transaction order, VAT expected 40 and post-role boundaries against supplied
+versioned development evidence. Report missing evidence and up to three next
+steps. Do not edit Jira or post comments.” No accounting records, customer data,
+employee data or credentials are shared. AE code and Jira remain unchanged.
+
+Data recipients are: Atlassian (issue and invoking-user context); the dedicated
+Cloudflare remote/Python tool (minimal issue snapshot and transient user token
+for authorized Jira read); the same OpenAI Wise agent/session (minimal brief
+and deterministic function result, never OAuth tokens); TypeSafe only if a
+separate explicit JEV authorization is granted. First AE live-test proposal
+keeps JEV and optional GitHub/Confluence source access OFF.
+
+Smallest proposal is one Assess plus one identical replay; aggregate AI spend
+at most US$1, **not approved**. A selected model, token bounds and enforceable
+provider/project budget must be confirmed before enabling network execution;
+call caps alone cannot guarantee the dollar limit. No paid plan upgrade.
+
+Existing Jira connector read access already supports the executed local test.
+It does not expose Forge install inventory or prove an installed Wise connector.
+For credential reuse discovery, owner supplies metadata only: existing Wise
+Forge app ARI, development environment/installation and remote endpoint;
+Cloudflare account/project; existing Wise OpenAI agent ID/project; confirmation
+that existing scoped credentials can be reused. Values are never requested in
+chat. Manifest still contains placeholder app/remote identity, so actual
+participant IDs cannot currently be named. Do not fabricate them or contact
+another Rovo agent. If reuse is unavailable, the registration/install, exact
+read-only consent and official secret binding actions in the table above
+require scoped approval. AE test selection grants none of those actions.

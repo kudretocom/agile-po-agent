@@ -17,7 +17,12 @@ from agile_po_agent.wise_assess import (
     Scope,
     WiseAssessor,
 )
-from agile_po_agent.wise_collectors import _adf_markdown, _declared_claims, _normalized_draft
+from agile_po_agent.wise_collectors import (
+    _adf_markdown,
+    _declared_claims,
+    _normalized_draft,
+    acceptance_criteria_candidates,
+)
 from agile_po_agent.wise_evidence import turkish_candidates
 
 
@@ -60,4 +65,13 @@ async def assess_verified_snapshot(
     result["claim_candidates"] = (turkish_candidates(description)
                                   if not _declared_claims(description, "jira-issue") else [])
     result["jev_required"] = isinstance(gate, OfflineJudge) and gate.called
+    candidates = acceptance_criteria_candidates(description)
+    result["acceptance_criteria_candidates"] = candidates
+    result["readiness_interpretation"] = {
+        "declared_acceptance_criteria_present": bool(candidates),
+        "normalized_draft_available": _normalized_draft(item) is not None,
+        "candidate_criteria_are_verified_evidence": False,
+        "missing_normalization_is_missing_criteria": False,
+        "implementation_completion_assessed": False,
+    }
     return result

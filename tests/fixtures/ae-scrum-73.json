@@ -1,0 +1,8 @@
+{
+  "key": "SCRUM-73",
+  "summary": "[AE] Günlük muhasebe post sırası, VAT tutarı ve rol yetkisini düzelt",
+  "description": "Kaynak: src/lib/daily-accounting.ts fişi satırlardan önce posted yaratıyor; drizzle/0000 triggerları bunu reddediyor. Ana tutar+vergi VAT_INPUT/OUTPUT etiketli; ae-reports toplamı 1000+50 satış/200+10 alışta 840 yerine 40 olmalı. docs/accountant-workspace.md operator post edemez sözleşmesiyle servis çelişiyor.\n\nKabul: Tüm belge, tahsilat/ödeme, manuel fiş yolları tek transaction draft→satırlar→posted; posted immutable guard korunur. VAT yalnız ilgili kontrol hesabı vergi tutarının işaretli hareketinden, eski etiketli ana satırları dışlayarak hesaplanır. Owner/admin/accountant post edebilir, operator/viewer post edemez; UI/server tutarlı. Kaynak migrationlarla izole DB entegrasyonu, rollback, cross-tenant, duplicate/idempotency, sıfır VAT ve settlement regresyonları geçer. Bağımsız diff/güvenlik incelemesi, lint/typecheck/build, exact head CI terminal sonucu kaydedilir. Production veri yazımı yok.\n\nBağımlılık: mevcut kaynak şema ve rol sözleşmesi. Geliştirme başladı; draft PR merge veya deployment anlamına gelmez.",
+  "issueType": "Task",
+  "status": "In Progress",
+  "version": "2026-10-01T09:44:24.505+0300"
+}

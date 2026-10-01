@@ -10,6 +10,43 @@ from agile_po_agent.models import JiraTaskDraft
 from agile_po_agent.wise_assess import Claim, ClaimKind
 
 
+def acceptance_criteria_candidates(description: str) -> list[dict[str, Any]]:
+    """Extract declared criteria for review, without asserting they are verified."""
+    if len(description) > 64_000:
+        raise ValueError("Acceptance input exceeds limit")
+    heading = re.compile(
+        r"^\s*(?:#{1,6}\s*)?(?:\*\*)?"
+        r"(Kabul(?:\s+(?:kriterleri|ölçütleri|şartları))?|Acceptance criteria)"
+        r"(?:\*\*)?\s*(?::\s*(.*)|$)", re.IGNORECASE,
+    )
+    boundary = re.compile(r"^\s*(?:#{1,6}\s+|(?:\*\*)?[\w ÇĞİÖŞÜçğıöşü-]+(?:\*\*)?\s*:)")
+    result: list[dict[str, Any]] = []
+    active = False
+    for number, line in enumerate(description.splitlines(), 1):
+        match = heading.fullmatch(line.replace("**", ""))
+        if match:
+            active = True
+            text = match.group(2) or ""
+        elif active and boundary.match(line):
+            active = False
+            continue
+        elif active:
+            text = line.strip()
+        else:
+            continue
+        text = re.sub(r"^\s*(?:[-*]\s+(?:\[[ xX]\]\s*)?|\d+[.)]\s+)", "", text).strip()
+        # Keep semicolon relationships intact; split explicit sentence boundaries only.
+        for item in re.split(r"(?<=[.!?])\s+(?=\S)", text):
+            if not item:
+                continue
+            if len(item) > 2000 or len(result) >= 32:
+                raise ValueError("Acceptance candidates exceed limit")
+            result.append({"text": item, "source_line": number,
+                           "source_id": "jira-issue", "verified": False,
+                           "human_review_required": True})
+    return result
+
+
 def _declared_claims(description: str, source_id: str) -> list[Claim]:
     """Only explicit, typed pilot claims are assessed; never infer them from prose."""
 
@@ -118,5 +155,3 @@ def _normalized_draft(snapshot: Any) -> JiraTaskDraft | None:
         })
     except ValidationError:
         return None
-
-
